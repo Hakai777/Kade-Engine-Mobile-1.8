@@ -1,25 +1,22 @@
-name: Build Kade Engine 1.8 APK
+name: Build Kade Engine APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 env:
   HAXE_VERSION: "4.3.4"
   LIME_VERSION: "8.0.2"
   OPENFL_VERSION: "9.2.2"
-  ANDROID_API_LEVEL: "33"
-  ANDROID_BUILD_TOOLS: "33.0.2"
-  NDK_VERSION: "23.1.7779620"
-  HAXELIB_DIR: ${{ github.workspace }}/.haxelib
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: true
@@ -29,11 +26,35 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: 17
+        java-version: '17'
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y wget unzip libgl1-mesa-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
     - name: Install Haxe
       run: |
-        set
+        HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
+        wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR" -O /tmp/$HAXE_TAR
+        tar -xzf /tmp/$HAXE_TAR -C /tmp
+        sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe
+        sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
+        sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
+        haxelib setup .
+
+    - name: Install Haxe libraries
+      run: |
+        haxelib install lime ${{ env.LIME_VERSION }} --always
+        haxelib install openfl ${{ env.OPENFL_VERSION }} --always
+        haxelib run lime setup android --yes
+
+    - name: Build APK
+      run: |
+        haxelib run lime build android -final
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: kadeengine-apk
+        path: export/android/bin/*.apk
