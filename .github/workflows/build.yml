@@ -12,18 +12,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Haxe
-        uses: haxe/setup-haxe@v1
-        with:
-          haxe-version: '4.2.5'
-
       - name: Install dependencies
         run: |
+          sudo apt update
+          sudo apt install -y curl unzip openjdk-11-jdk
+          curl -L https://haxe.org/website-content/downloads/4.2.5/downloads/haxe-4.2.5-linux64.tar.gz | tar xz
+          sudo mv haxe-4.2.5-linux64 /opt/haxe
+          sudo ln -s /opt/haxe/haxe /usr/local/bin/haxe
+          sudo ln -s /opt/haxe/haxelib /usr/local/bin/haxelib
+          haxelib setup /home/runner/.haxelib
           haxelib install lime
           haxelib install openfl
           haxelib install flixel
           haxelib install extension-webm
-          # Adicione outras libs necessárias aqui
+          # Adicione outras libs que precisar
 
       - name: Build APK
         run: lime build android -final
