@@ -1,10 +1,12 @@
-name: build-android
+name: Build APK
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build-android:
@@ -20,18 +22,29 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
 
-      - name: Install dependencies
+      - name: Install Haxe manually
         run: |
+          sudo add-apt-repository ppa:haxe/releases -y
           sudo apt-get update
-          sudo apt-get install -y openjdk-11-jdk unzip curl
-
-      - name: Install Haxe 4.2.5
-        run: |
-          curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
-          sudo tar -xzf haxe.tar.gz -C /usr/local
-          sudo ln -s /usr/local/haxe-4.2.5/bin/haxe /usr/local/bin/haxe
-          sudo ln -s /usr/local/haxe-4.2.5/bin/haxelib /usr/local/bin/haxelib
+          sudo apt-get install haxe -y
           haxe --version
 
+      - name: Install Lime and OpenFL
+        run: |
+          haxelib install lime
+          haxelib install openfl
+          haxelib run lime setup
+          haxelib run openfl setup
+
+      - name: Install dependencies
+        run: haxelib install
+
       - name: Build APK
-        run: lime test android -clean
+        run: |
+          lime build android -release -final -app-icon android-icon.png
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: kade-engine-apk
+          path: bin/android/*.apk
