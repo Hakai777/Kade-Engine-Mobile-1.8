@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
 
     - name: Update and install dependencies
       run: |
@@ -22,23 +22,16 @@ jobs:
     - name: Download and setup Haxe
       run: |
         curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
-        tar -xzf haxe.tar.gz
-        ls -l
-        if [ -d haxe-4.2.5-linux64 ]; then
-          mkdir -p ~/haxe
-          mv haxe-4.2.5-linux64/* ~/haxe/
-          rm -rf haxe-4.2.5-linux64 haxe.tar.gz
-        else
-          echo "Pasta haxe-4.2.5-linux64 não encontrada"
-          exit 1
-        fi
+        mkdir -p ~/haxe
+        tar -xzf haxe.tar.gz -C ~/haxe
+        rm haxe.tar.gz
         echo "$HOME/haxe" >> $GITHUB_PATH
         haxe --version
 
     - name: Set HAXE_STD_PATH environment variable
       run: echo "HAXE_STD_PATH=$HOME/haxe/std" >> $GITHUB_ENV
 
-    - name: Install haxelib and libraries
+    - name: Install haxelib and dependencies
       run: |
         ~/haxe/haxelib setup ~/haxelib
         ~/haxe/haxelib install lime
@@ -50,7 +43,6 @@ jobs:
 
     - name: Build APK
       run: |
-        export PATH=$PATH:$HOME/haxe
         lime test android
 
     - name: Upload APK artifact
