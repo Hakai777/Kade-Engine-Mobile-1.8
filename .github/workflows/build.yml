@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
@@ -42,7 +42,7 @@ jobs:
         lime build android -debug
 
     - name: Upload APK artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: kade-engine-apk
         path: export/android/bin/KadeEngine-debug.apk
