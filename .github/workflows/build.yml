@@ -1,4 +1,4 @@
-name: Build Kade Engine APK
+name: Build Kade Engine Mobile
 
 on:
   push:
@@ -11,46 +11,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
     - name: Update and install dependencies
       run: |
-        sudo apt update
-        sudo apt install -y curl unzip zip neko
+        sudo apt-get update
+        sudo apt-get install -y curl unzip zip neko libneko2
 
-    - name: Download Haxe 4.2.5
-      run: curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
-
-    - name: Extract Haxe
-      run: tar -xzf haxe.tar.gz
-
-    - name: Move Haxe folder (try possible names)
+    - name: Download Haxe
       run: |
-        if [ -d "haxe-4.2.5-linux64" ]; then
-          mv haxe-4.2.5-linux64 haxe
-        elif [ -d "haxe-4.2.5" ]; then
-          mv haxe-4.2.5 haxe
-        else
-          echo "Haxe folder not found, skipping move"
-        fi
+        curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
+        tar -xzf haxe.tar.gz
+        # O conteúdo da tar tem uma pasta haxe-4.2.5-linux64, mover seu conteúdo para ~/haxe
+        mkdir -p ~/haxe
+        mv haxe-4.2.5-linux64/* ~/haxe/
+        rm -rf haxe-4.2.5-linux64 haxe.tar.gz
+        export PATH=$PATH:~/haxe
+        haxe --version  # Teste rápido pra garantir que haxe está ok
 
-    - name: Add Haxe to PATH
-      run: echo "${{ github.workspace }}/haxe" >> $GITHUB_PATH
+    - name: Set HAXE_STD_PATH environment variable
+      run: echo "HAXE_STD_PATH=~/haxe/std" >> $GITHUB_ENV
 
-    - name: Verify Haxe version
-      run: haxe --version
-
-    - name: Build Kade Engine
+    - name: Install haxelib
       run: |
-        haxelib setup ~/.haxelib
-        haxelib install lime
-        haxelib install openfl
-        haxelib install format
-        haxelib run lime build android -clean -final
+        ~/haxe/haxelib setup ~/haxelib
+        ~/haxe/haxelib install lime
+        ~/haxe/haxelib install openfl
+        ~/haxe/haxelib install flixel
+        ~/haxe/haxelib install flixel-addons
+        ~/haxe/haxelib install flixel-ui
+        ~/haxe/haxelib run lime setup
+
+    - name: Build APK
+      run: |
+        # Comandos para build do Kade Engine, por exemplo
+        lime test android
 
     - name: Upload APK artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: kade-engine-apk
-        path: bin/android/bin/KadeEngine.apk
+        path: path/para/seu/apk/*.apk
