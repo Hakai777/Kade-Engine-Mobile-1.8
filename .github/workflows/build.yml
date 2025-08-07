@@ -1,4 +1,4 @@
-name: Build Kade Engine 1.8 - APK (basic test)
+name: Build Kade Engine 1.8 - APK (robust)
 
 on:
   workflow_dispatch:
@@ -14,58 +14,207 @@ env:
   NDK_VERSION: "23.1.7779620"
   GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
   HAXELIB_DIR: ${{ github.workspace }}/.haxelib
+  MAX_RETRIES: 4
+  RETRY_BASE_SLEEP: 8
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     env:
       LANG: C.UTF-8
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
 
-      - name: Setup Java (Temurin 17)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+    - name: Setup Java (Temurin 17)
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y git wget unzip python3-pip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y git wget unzip python3-pip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
-      - name: Install Haxe
-        run: |
-          HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
-          wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR" -O /tmp/$HAXE_TAR
-          tar -xzf /tmp/$HAXE_TAR -C /tmp
-          sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe
-          sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
-          sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-          haxelib setup ${{ env.HAXELIB_DIR }}
+    - name: Cache haxelib
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.HAXELIB_DIR }}
+        key: haxelib-${{ runner.os }}-${{ hashFiles('**/*.hxml') }}-${{ hashFiles('Project.xml') }}
+        restore-keys: haxelib-${{ runner.os }}-
 
-      - name: Install common Haxe libs
-        run: |
-          export PATH=$PATH:/opt/haxe
-          haxelib install lime ${{ env.LIME_VERSION }} --always
-          haxelib install openfl ${{ env.OPENFL_VERSION }} --always
-          haxelib install hxcpp --always || true
-          haxelib install actuate --always || true
-          haxelib install flixel --always || true
-          haxelib run lime setup android --yes
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.GRADLE_USER_HOME }}
+        key: gradle-${{ runner.os }}-${{ hashFiles('**/gradle-wrapper.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
 
-      - name: Setup Android SDK & NDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: ${{ env.ANDROID_API_LEVEL }}
-          build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
-          ndk: ${{ env.NDK_VERSION }}
+    - name: Cache Android SDK (tools & build-tools)
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/Android/Sdk
+        key: android-sdk-${{ runner.os }}-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_BUILD_TOOLS }}
+        restore-keys: android-sdk-${{ runner.os }}-
 
-      - name: Accept Android licenses
-        run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
+    - name: Install Haxe (${ { env.HAXE_VERSION }})
+      run: |
+        set -e
+        HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
+        wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR" -O /tmp/$HAXE_TAR || (echo "Haxe download failed" && exit 2)
+        tar -xzf /tmp/$HAXE_TAR -C /tmp
+        sudo mv /tmp/haxe-${{ env.HAXE_VERSION }}-linux64 /opt/haxe
+        sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
+        sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
+        haxelib setup ${{ env.HAXELIB_DIR }}
 
-      - name: Build APK
-        run: haxelib run lime build android -final
+    - name: Install common Haxe libs (with retries)
+      run: |
+        set -e
+        retry() {
+          n=0
+          until [ $n -ge $1 ]; do
+            shift
+            "$@" && break
+            n=$((n+1))
+            s=$(( $n * ${{ env.RETRY_BASE_SLEEP }} ))
+            echo "Command failed. Retry #$n after ${s}s..."
+            sleep $s
+          done
+          if [ $n -ge $1 ]; then
+            echo "Retries exhausted for: $*"
+            return 1
+          fi
+        }
+        export PATH=$PATH:/opt/haxe
+        retry ${{ env.MAX_RETRIES }} haxelib install lime ${{ env.LIME_VERSION }} --always
+        retry ${{ env.MAX_RETRIES }} haxelib install openfl ${{ env.OPENFL_VERSION }} --always
+        haxelib install hxcpp --always || true
+        haxelib install actuate --always || true
+        haxelib install flixel --always || true
+        retry ${{ env.MAX_RETRIES }} haxelib run lime setup android --yes
+
+    - name: Setup Android SDK & NDK
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: ${{ env.ANDROID_API_LEVEL }}
+        build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
+        ndk: ${{ env.NDK_VERSION }}
+
+    - name: Accept Android licenses (in case)
+      run: |
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+    - name: Prepare keystore from secret (optional; set secrets if you want signed release)
+      if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      run: |
+        mkdir -p $HOME/keystore
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $HOME/keystore/upload-keystore.jks
+        ls -l $HOME/keystore
+      shell: bash
+
+    - name: Show basic debug info
+      run: |
+        echo "Runner: $RUNNER_OS"
+        java -version
+        haxe -version || true
+        haxelib list || true
+        echo "Android SDK root: $ANDROID_SDK_ROOT"
+        echo "NDK: $ANDROID_NDK_HOME"
+        env | sort
+
+    - name: Build APK with exponential backoff and log capture
+      id: run_build
+      run: |
+        set -euo pipefail
+        BUILD_LOG="build_output.log"
+        echo "Starting build at $(date)" > $BUILD_LOG
+        attempt=0
+        rc=0
+        until [ $attempt -ge ${{ env.MAX_RETRIES }} ]
+        do
+          attempt=$((attempt+1))
+          echo "=== BUILD ATTEMPT $attempt ===" | tee -a $BUILD_LOG
+          rm -rf export || true
+          haxelib run lime build android -final 2>&1 | tee -a $BUILD_LOG
+          rc=${PIPESTATUS[0]:-0}
+          if [ "$rc" -eq 0 ]; then
+            echo "Build succeeded on attempt $attempt" | tee -a $BUILD_LOG
+            break
+          fi
+          if grep -qiE "502|Bad Gateway|http error|unable to download|timeout|timed out" $BUILD_LOG; then
+            backoff=$(( $attempt * ${{ env.RETRY_BASE_SLEEP }} ))
+            echo "Network-like error detected; sleeping ${backoff}s then retrying..." | tee -a $BUILD_LOG
+            sleep $backoff
+          else
+            echo "Non-network error, not retrying more than configured attempts." | tee -a $BUILD_LOG
+          fi
+        done
+        echo "Build finished with exit code $rc" | tee -a $BUILD_LOG
+        echo "::set-output name=exit_code::$rc"
+        mkdir -p $GITHUB_WORKSPACE/build-logs
+        cp $BUILD_LOG $GITHUB_WORKSPACE/build-logs/
+        find . -type f -name "*.log" -maxdepth 6 -print -exec cp --parents {} $GITHUB_WORKSPACE/build-logs/ \; || true
+        if [ -d export ]; then
+          cp -r export $GITHUB_WORKSPACE/ || true
+        fi
+        exit $rc
+      continue-on-error: true
+      shell: bash
+
+    - name: Collect APK paths (if any)
+      run: |
+        set -e
+        echo "Searching for APKs..."
+        mkdir -p apk-collection
+        find . -type f \( -iname "*.apk" -o -path "*/build/outputs/apk/*.apk" -o -path "*/bin/*.apk" \) -print | tee apk_paths.txt || true
+        if [ -s apk_paths.txt ]; then
+          while IFS= read -r p; do
+            cp --parents "$p" apk-collection/ || true
+          done < apk_paths.txt
+          echo "Found APKs:"
+          ls -R apk-collection || true
+        else
+          echo "No APKs found."
+        fi
+
+    - name: Upload APK(s) (always)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: kadeengine-apks
+        path: apk-collection
+        retention-days: 7
+
+    - name: Upload full build logs (always)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: kadeengine-build-logs
+        path: build-logs
+        retention-days: 14
+
+    - name: Upload export folder (if present)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: kadeengine-export
+        path: export
+        retention-days: 7
+
+    - name: Final status
+      run: |
+        echo "Build exit code: ${{ steps.run_build.outputs.exit_code }}"
+        if [ "${{ steps.run_build.outputs.exit_code }}" != "0" ]; then
+          echo "WARNING: Build failed — check attached logs and artifacts." >&2
+          exit 1
+        else
+          echo "Build succeeded."
+        fi
+      shell: bash
