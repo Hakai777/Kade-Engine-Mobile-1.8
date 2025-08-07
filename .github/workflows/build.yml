@@ -1,37 +1,60 @@
-name: Build Kade Engine Android APK
+name: Build Kade Engine Mobile
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar repositório
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Instalar dependências
-        run: |
-          sudo apt update
-          sudo apt install -y libgc-dev libgtk-3-dev libglu1-mesa-dev libgles2-mesa-dev openjdk-8-jdk wget unzip
+    - name: Update and install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl unzip zip neko libneko2
 
-      - name: Instalar Haxe 4.2.5
-        run: |
-          mkdir -p ~/haxe
-          curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
-          tar -xzf haxe.tar.gz -C ~/haxe --strip-components=1
-          rm haxe.tar.gz
-          echo "$HOME/haxe" >> $GITHUB_PATH
-          echo "HAXE_STD_PATH=$HOME/haxe/std" >> $GITHUB_ENV
+    - name: Download and setup Haxe
+      run: |
+        curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
+        mkdir -p ~/haxe
+        tar -xzf haxe.tar.gz -C ~/haxe --strip-components=1
+        rm haxe.tar.gz
+        echo "$HOME/haxe" >> $GITHUB_PATH
+        haxe_version=$(~/haxe/haxe --version)
+        echo "Haxe version: $haxe_version"
 
-      - name: Instalar Haxelib e Lime
-        run: |
-          ~/haxe/haxelib setup ~/haxe/haxelib
-          ~/haxe/haxelib install lime
-          ~/haxe/haxelib install openfl
-          ~/haxe/haxelib install actuate
-          ~/haxe/haxelib install flixel
-          ~/haxe
+    - name: Set environment variables for Neko libs
+      run: |
+        echo "/usr/lib/neko" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/usr/lib/neko" >> $GITHUB_ENV
+
+    - name: Install haxelib libraries
+      env:
+        LD_LIBRARY_PATH: /usr/lib/neko
+      run: |
+        ~/haxe/haxelib setup ~/haxe/haxelib
+        ~/haxe/haxelib install lime
+        ~/haxe/haxelib install openfl
+        ~/haxe/haxelib install actuate
+        ~/haxe/haxelib install flixel
+        ~/haxe/haxelib install flixel-addons
+        ~/haxe/haxelib install flixel-ui
+        ~/haxe/haxelib run lime setup
+
+    - name: Build APK
+      env:
+        LD_LIBRARY_PATH: /usr/lib/neko
+      run: |
+        ~/haxe/haxelib run lime test android
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kade-engine-apk
+        path: path/para/seu/apk/*.apk
