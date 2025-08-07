@@ -1,53 +1,41 @@
-name: Build Kade Engine Mobile
+name: Build KadeEngine APK
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout o código
+        uses: actions/checkout@v3
 
-    - name: Update and install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y curl unzip zip neko libneko2
+      - name: Instalar dependências (Java & Android SDK)
+        uses: android-actions/setup-android@v2
 
-    - name: Download and setup Haxe
-      run: |
-        mkdir -p $HOME/haxe
-        curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
-        tar -xzf haxe.tar.gz -C $HOME/haxe --strip-components=1
-        rm haxe.tar.gz
-        echo "$HOME/haxe" >> $GITHUB_PATH
-        export PATH="$HOME/haxe:$PATH"
-        haxe --version
+      - name: Instalar Haxe 4.2.5
+        run: |
+          mkdir -p ~/haxe
+          curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
+          tar -xzf haxe.tar.gz -C ~/haxe --strip-components=1
+          rm haxe.tar.gz
+          echo "$HOME/haxe" >> $GITHUB_PATH
+          export PATH="$HOME/haxe:$PATH"
+          haxe --version
 
-    - name: Set HAXE_STD_PATH environment variable
-      run: echo "HAXE_STD_PATH=$HOME/haxe/std" >> $GITHUB_ENV
+      - name: Instalar haxelib e bibliotecas
+        run: |
+          export PATH="$HOME/haxe:$PATH"
+          haxelib setup ~/haxe/haxelib
+          haxelib install lime
+          haxelib install openfl
+          haxelib install actuate
+          haxelib run lime setup
 
-    - name: Install haxelib and libs
-      run: |
-        $HOME/haxe/haxelib setup $HOME/haxelib
-        $HOME/haxe/haxelib install lime
-        $HOME/haxe/haxelib install openfl
-        $HOME/haxe/haxelib install flixel
-        $HOME/haxe/haxelib install flixel-addons
-        $HOME/haxe/haxelib install flixel-ui
-        $HOME/haxe/haxelib run lime setup
-
-    - name: Build APK
-      run: |
-        $HOME/haxe/haxelib run lime test android
-
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kade-engine-apk
-        path: path/para/seu/apk/*.apk
+      - name: Build APK
+        run: |
+          export PATH="$HOME/haxe:$PATH"
+          haxelib run lime test android
+        env:
+          HAXE_STD_PATH: $HOME/haxe/std
