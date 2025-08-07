@@ -11,42 +11,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies and setup Haxe + Neko
-      run: |
-        sudo apt update
-        sudo apt install -y libgc1 neko curl unzip zip
-        curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
-        tar -xzf haxe.tar.gz
-        sudo mv haxe-4.2.5-linux64/haxe /usr/local/bin/haxe
-        sudo mv haxe-4.2.5-linux64/haxelib /usr/local/bin/haxelib
-        sudo chmod +x /usr/local/bin/haxe /usr/local/bin/haxelib
-        haxelib setup /usr/share/haxe/lib
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y curl unzip zip neko
 
-    - name: Install Kade Engine libs
-      run: |
-        haxelib install lime 7.9.0
-        haxelib install openfl 9.1.0
-        haxelib install format
-        haxelib install actuate
-        haxelib install flixel
-        haxelib install flixel-addons
-        haxelib install flixel-ui
-        haxelib install snow
-        haxelib install nape
-        haxelib install linc
-        haxelib install hxcpp
-        haxelib run lime setup
-        haxelib run openfl setup
+      - name: Install Haxe 4.2.5
+        run: |
+          curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
+          tar -xzf haxe.tar.gz
+          mkdir -p ~/haxe
+          mv haxe-4.2.5/* ~/haxe/
+          export PATH=$PATH:~/haxe
+          echo "$HOME/haxe" >> $GITHUB_PATH
+          haxe --version
 
-    - name: Build APK
-      run: |
-        lime build android -debug -final
-
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kadeengine-apk
-        path: bin/android/bin/Funkin
+      - name: Install Haxelib libs
+        run: |
+          export PATH=$PATH:~/haxe
+          haxelib setup ~/
