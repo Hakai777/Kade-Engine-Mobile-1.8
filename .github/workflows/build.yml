@@ -21,17 +21,18 @@ jobs:
 
     - name: Download and setup Haxe
       run: |
-        curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
         mkdir -p ~/haxe
+        curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
         tar -xzf haxe.tar.gz -C ~/haxe
         rm haxe.tar.gz
         echo "$HOME/haxe" >> $GITHUB_PATH
+        export PATH="$HOME/haxe:$PATH"
         haxe --version
 
     - name: Set HAXE_STD_PATH environment variable
       run: echo "HAXE_STD_PATH=$HOME/haxe/std" >> $GITHUB_ENV
 
-    - name: Install haxelib and dependencies
+    - name: Install haxelib and libraries
       run: |
         ~/haxe/haxelib setup ~/haxelib
         ~/haxe/haxelib install lime
@@ -43,6 +44,7 @@ jobs:
 
     - name: Build APK
       run: |
+        export PATH="$HOME/haxe:$PATH"
         lime test android
 
     - name: Upload APK artifact
