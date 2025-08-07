@@ -13,30 +13,32 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Install Haxe 4.2.5
+    - name: Download and install Haxe 4.2.5
       run: |
         curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
         tar -xzf haxe.tar.gz
-        sudo mv haxe-4.2.5-linux64 /usr/local/haxe
+        extracted_dir=$(tar -tf haxe.tar.gz | head -1 | cut -f1 -d"/")
+        sudo mv "$extracted_dir" /usr/local/haxe
         echo "/usr/local/haxe" >> $GITHUB_PATH
 
-    - name: Add Haxe to PATH
-      run: echo "/usr/local/haxe" >> $GITHUB_PATH
+    - name: Verify Haxe
+      run: /usr/local/haxe/haxe --version
 
-    - name: Verify Haxe install
-      run: haxe --version
+    - name: Set up haxelib
+      run: |
+        mkdir -p ~/haxelib
+        haxelib setup ~/haxelib
 
     - name: Install dependencies
       run: |
-        haxelib setup ~/haxelib
         haxelib install lime
         haxelib install openfl
         haxelib install flixel
         haxelib install flixel-addons
-        haxelib install tjson
-        haxelib install hxcpp
-        haxelib install actuate
         haxelib install extension-webm
+        haxelib install actuate
+        haxelib install hxcpp
+        haxelib install tjson
         haxelib run lime setup
         haxelib run openfl setup
 
