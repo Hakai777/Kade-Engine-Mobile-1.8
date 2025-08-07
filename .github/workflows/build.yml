@@ -1,4 +1,4 @@
-name: Build Kade Engine APK
+name: Build Kade Engine 1.8 - APK (basic & working)
 
 on:
   workflow_dispatch:
@@ -15,46 +15,91 @@ env:
   GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
   HAXELIB_DIR: ${{ github.workspace }}/.haxelib
   MAX_RETRIES: 3
-  RETRY_BASE_SLEEP: 5
+  RETRY_BASE_SLEEP: 8
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
+    env:
+      LANG: C.UTF-8
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
 
-    - name: Setup Java 17
+    - name: Setup Java (Temurin 17)
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: 17
+        java-version: '17'
 
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
+        sudo apt-get update -y
+        sudo apt-get install -y git wget unzip python3-pip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
-    - name: Download and install Haxe
+    - name: Cache haxelib
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.HAXELIB_DIR }}
+        key: haxelib-${{ runner.os }}-${{ hashFiles('**/*.hxml') }}-${{ hashFiles('Project.xml') }}
+        restore-keys: haxelib-${{ runner.os }}-
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.GRADLE_USER_HOME }}
+        key: gradle-${{ runner.os }}-${{ hashFiles('**/gradle-wrapper.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
+
+    - name: Cache Android SDK
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/Android/Sdk
+        key: android-sdk-${{ runner.os }}-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_BUILD_TOOLS }}
+        restore-keys: android-sdk-${{ runner.os }}-
+
+    - name: Install Haxe
       run: |
+        set -e
         HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR -O /tmp/$HAXE_TAR
+        wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR" -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
-        sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe
+        ls -l /tmp
+        sudo mv /tmp/haxe-${{ env.HAXE_VERSION }}-linux64 /opt/haxe || sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe || sudo mv /tmp/haxe /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup ${{ env.HAXELIB_DIR }}
 
-    - name: Install Haxe libraries
+    - name: Install Haxe libs (with retries)
       run: |
-        haxelib install lime ${{ env.LIME_VERSION }} --always
-        haxelib install openfl ${{ env.OPENFL_VERSION }} --always
+        set -e
+        retry() {
+          n=0
+          until [ $n -ge $1 ]; do
+            shift
+            "$@" && break
+            n=$((n+1))
+            s=$((n * ${{ env.RETRY_BASE_SLEEP }}))
+            echo "Command failed. Retry #$n after ${s}s..."
+            sleep $s
+          done
+          if [ $n -ge $1 ]; then
+            echo "Retries exhausted for: $*"
+            return 1
+          fi
+        }
+        export PATH=$PATH:/opt/haxe
+        retry ${{ env.MAX_RETRIES }} haxelib install lime ${{ env.LIME_VERSION }} --always
+        retry ${{ env.MAX_RETRIES }} haxelib install openfl ${{ env.OPENFL_VERSION }} --always
         haxelib install hxcpp --always || true
         haxelib install actuate --always || true
         haxelib install flixel --always || true
-        haxelib run lime setup android --yes
+        retry ${{ env.MAX_RETRIES }} haxelib run lime setup android --yes
 
     - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
@@ -68,16 +113,18 @@ jobs:
 
     - name: Build APK
       run: |
+        set -e
+        rm -rf export || true
         haxelib run lime build android -final
 
     - name: Collect APKs
       run: |
-        mkdir -p apk-collection
-        find . -type f -name "*.apk" -exec cp --parents {} apk-collection/ \; || true
+        mkdir -p apk-output
+        find . -type f -iname '*.apk' -exec cp --parents {} apk-output/ \;
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: kadeengine-apk
-        path: apk-collection
+        name: kadeengine-apks
+        path: apk-output
         retention-days: 7
