@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Update and install dependencies
       run: |
@@ -29,4 +29,4 @@ jobs:
           mv haxe-4.2.5-linux64/* ~/haxe/
           rm -rf haxe-4.2.5-linux64 haxe.tar.gz
         else
-          echo "Pasta haxe-4.2.5-linux64
+          echo "Pasta haxe-4.2.5-linux64"
