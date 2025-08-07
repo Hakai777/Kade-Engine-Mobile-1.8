@@ -14,7 +14,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Update and install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y curl unzip zip neko libneko2
@@ -26,13 +26,17 @@ jobs:
         tar -xzf haxe.tar.gz -C ~/haxe --strip-components=1
         rm haxe.tar.gz
         echo "$HOME/haxe" >> $GITHUB_PATH
-        haxe --version
+      shell: bash
 
-    - name: Set HAXE_STD_PATH environment variable
-      run: echo "HAXE_STD_PATH=$HOME/haxe/std" >> $GITHUB_ENV
+    - name: Verify Haxe installation
+      run: |
+        export PATH="$HOME/haxe:$PATH"
+        haxe --version
+      shell: bash
 
     - name: Setup haxelib and install libraries
       run: |
+        export PATH="$HOME/haxe:$PATH"
         ~/haxe/haxelib setup ~/haxelib
         ~/haxe/haxelib install lime
         ~/haxe/haxelib install openfl
@@ -41,13 +45,16 @@ jobs:
         ~/haxe/haxelib install flixel-addons
         ~/haxe/haxelib install flixel-ui
         ~/haxe/haxelib run lime setup
+      shell: bash
 
     - name: Build APK
       run: |
+        export PATH="$HOME/haxe:$PATH"
         ~/haxe/haxelib run lime test android
+      shell: bash
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: kade-engine-apk
-        path: bin/android/*.apk
+        path: ./export/android/*.apk  # ajuste esse path conforme seu build gera o apk
