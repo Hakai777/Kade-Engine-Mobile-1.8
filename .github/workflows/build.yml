@@ -1,50 +1,46 @@
-name: Build APK
+name: Build Kade Engine Android APK
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Install Java JDK 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y curl unzip openjdk-17-jdk wget
 
-      - name: Install Haxe manually
-        run: |
-          sudo add-apt-repository ppa:haxe/releases -y
-          sudo apt-get update
-          sudo apt-get install haxe -y
-          haxe --version
+    - name: Install Haxe 4.2.5
+      run: |
+        wget https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -O haxe.tar.gz
+        tar -xzf haxe.tar.gz
+        sudo mv haxe-4.2.5-linux64 /opt/haxe
+        sudo ln -s /opt/haxe/haxe /usr/local/bin/haxe
+        sudo ln -s /opt/haxe/haxelib /usr/local/bin/haxelib
 
-      - name: Install Lime and OpenFL
-        run: |
-          haxelib install lime
-          haxelib install openfl
-          haxelib run lime setup
-          haxelib run openfl setup
+    - name: Update Haxelib and install Lime/OpenFL
+      run: |
+        haxelib setup /home/runner/.haxelib
+        haxelib install lime
+        haxelib install openfl
+        haxelib run lime setup
+        haxelib run openfl setup
 
-      - name: Install dependencies
-        run: haxelib install
+    - name: Build APK
+      run: |
+        lime build android -debug
 
-      - name: Build APK
-        run: |
-          lime build android -release -final -app-icon android-icon.png
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: kade-engine-apk
-          path: bin/android/*.apk
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: kade-engine-apk
+        path: ./bin/android/bin/KadeEngine-debug.apk
