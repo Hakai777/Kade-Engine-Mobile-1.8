@@ -4,45 +4,48 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y curl unzip openjdk-11-jdk
-
     - name: Install Haxe 4.2.5
       run: |
         curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
         tar -xzf haxe.tar.gz
-        sudo mv haxe-4.2.5 /opt/haxe
-        sudo ln -s /opt/haxe/haxe /usr/local/bin/haxe
-        sudo ln -s /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxe --version
+        sudo mv haxe-4.2.5-linux64 /usr/local/haxe
+        echo "/usr/local/haxe" >> $GITHUB_PATH
 
-    - name: Setup Haxe libs
+    - name: Add Haxe to PATH
+      run: echo "/usr/local/haxe" >> $GITHUB_PATH
+
+    - name: Verify Haxe install
+      run: haxe --version
+
+    - name: Install dependencies
       run: |
-        haxelib setup
-        haxelib install lime 7.8.1
-        haxelib install openfl 9.1.0
+        haxelib setup ~/haxelib
+        haxelib install lime
+        haxelib install openfl
+        haxelib install flixel
+        haxelib install flixel-addons
+        haxelib install tjson
         haxelib install hxcpp
-        haxelib run lime setup android
+        haxelib install actuate
+        haxelib install extension-webm
         haxelib run lime setup
+        haxelib run openfl setup
 
     - name: Build APK
       run: |
-        lime build android -debug
+        haxelib run lime build android -final
 
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kade-engine-apk
-        path: export/android/bin/KadeEngine-debug.apk
+        name: KadeEngine-APK
+        path: export/release/android/bin/app-release.apk
