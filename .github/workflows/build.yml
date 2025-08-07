@@ -4,41 +4,53 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Install dependencies
+    - name: Update and install dependencies
       run: |
         sudo apt update
         sudo apt install -y curl unzip zip neko
 
-    - name: Download and setup Haxe 4.2.5
-      run: |
-        curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
-        tar -xzf haxe.tar.gz
-        mv haxe-4.2.5-linux64 haxe
-        export PATH=$PWD/haxe:$PATH
-        haxe --version
+    - name: Download Haxe 4.2.5
+      run: curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
 
-    - name: Setup Haxelib
+    - name: Extract Haxe
+      run: tar -xzf haxe.tar.gz
+
+    - name: Move Haxe folder (try possible names)
       run: |
-        export PATH=$PWD/haxe:$PATH
-        haxelib setup $PWD/haxelib
+        if [ -d "haxe-4.2.5-linux64" ]; then
+          mv haxe-4.2.5-linux64 haxe
+        elif [ -d "haxe-4.2.5" ]; then
+          mv haxe-4.2.5 haxe
+        else
+          echo "Haxe folder not found, skipping move"
+        fi
+
+    - name: Add Haxe to PATH
+      run: echo "${{ github.workspace }}/haxe" >> $GITHUB_PATH
+
+    - name: Verify Haxe version
+      run: haxe --version
+
+    - name: Build Kade Engine
+      run: |
+        haxelib setup ~/.haxelib
         haxelib install lime
         haxelib install openfl
         haxelib install format
-        haxelib install actuate
-        haxelib install swf
-        haxelib install hxcpp
-        haxelib run lime setup
+        haxelib run lime build android -clean -final
 
-    - name: Build APK
-      run: |
-        export PATH=$
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: kade-engine-apk
+        path: bin/android/bin/KadeEngine.apk
