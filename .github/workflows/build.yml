@@ -11,25 +11,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y curl unzip zip neko
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y curl unzip zip neko
 
-      - name: Install Haxe 4.2.5
-        run: |
-          curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
-          tar -xzf haxe.tar.gz
-          mkdir -p ~/haxe
-          mv haxe-4.2.5/* ~/haxe/
-          export PATH=$PATH:~/haxe
-          echo "$HOME/haxe" >> $GITHUB_PATH
-          haxe --version
+    - name: Download and setup Haxe 4.2.5
+      run: |
+        curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
+        tar -xzf haxe.tar.gz
+        mv haxe-4.2.5-linux64 haxe
+        export PATH=$PWD/haxe:$PATH
+        haxe --version
 
-      - name: Install Haxelib libs
-        run: |
-          export PATH=$PATH:~/haxe
-          haxelib setup ~/
+    - name: Setup Haxelib
+      run: |
+        export PATH=$PWD/haxe:$PATH
+        haxelib setup $PWD/haxelib
+        haxelib install lime
+        haxelib install openfl
+        haxelib install format
+        haxelib install actuate
+        haxelib install swf
+        haxelib install hxcpp
+        haxelib run lime setup
+
+    - name: Build APK
+      run: |
+        export PATH=$
