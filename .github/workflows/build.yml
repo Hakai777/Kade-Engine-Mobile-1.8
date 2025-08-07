@@ -1,4 +1,4 @@
-name: Build Kade Engine Android APK
+name: Build Kade Engine APK
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,24 +16,26 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt update
-        sudo apt install -y curl unzip openjdk-17-jdk wget
+        sudo apt-get update
+        sudo apt-get install -y curl unzip openjdk-11-jdk
 
     - name: Install Haxe 4.2.5
       run: |
-        wget https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -O haxe.tar.gz
+        curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
         tar -xzf haxe.tar.gz
-        sudo mv haxe-4.2.5-linux64 /opt/haxe
+        sudo mv haxe-4.2.5 /opt/haxe
         sudo ln -s /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -s /opt/haxe/haxelib /usr/local/bin/haxelib
+        haxe --version
 
-    - name: Update Haxelib and install Lime/OpenFL
+    - name: Setup Haxe libs
       run: |
-        haxelib setup /home/runner/.haxelib
-        haxelib install lime
-        haxelib install openfl
+        haxelib setup
+        haxelib install lime 7.8.1
+        haxelib install openfl 9.1.0
+        haxelib install hxcpp
+        haxelib run lime setup android
         haxelib run lime setup
-        haxelib run openfl setup
 
     - name: Build APK
       run: |
@@ -43,4 +45,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: kade-engine-apk
-        path: ./bin/android/bin/KadeEngine-debug.apk
+        path: export/android/bin/KadeEngine-debug.apk
