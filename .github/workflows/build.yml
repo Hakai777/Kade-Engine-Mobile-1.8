@@ -1,9 +1,8 @@
-name: Build Kade Engine APK (Basic Release)
+name: Build Kade Engine APK (Basic)
 
 on:
   push:
-    tags:
-      - 'v*.*.*'  # roda quando criar tag tipo v1.0.0
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -35,10 +34,10 @@ jobs:
 
     - name: Install Haxe
       run: |
-        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
+        HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
-        sudo mv /tmp/haxe /opt/haxe
+        sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
@@ -59,18 +58,19 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept licenses
+    - name: Accept Android licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
-      run: haxelib run lime build android -final
+      run: |
+        haxelib run lime build android -final
 
     - name: Collect APK
       run: |
         mkdir -p apk
         find . -name '*.apk' -exec cp {} apk/ \;
 
-    - name: Upload APK as Release artifact
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: KadeEngine-APK
