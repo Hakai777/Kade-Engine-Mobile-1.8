@@ -1,9 +1,9 @@
-name: Build Kade Engine Release APK
+name: Build Kade Engine APK (Basic)
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
 
 env:
   HAXE_VERSION: "4.3.4"
@@ -12,46 +12,40 @@ env:
   ANDROID_API_LEVEL: "33"
   ANDROID_BUILD_TOOLS: "33.0.2"
   NDK_VERSION: "23.1.7779620"
-  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
-  HAXELIB_DIR: ${{ github.workspace }}/.haxelib
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        submodules: true
-        fetch-depth: 0
 
-    - name: Setup Java (Temurin 17)
+    - name: Setup Java 17
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: '17'
+        java-version: 17
 
     - name: Install dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y git wget unzip python3-pip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
+        sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
     - name: Install Haxe
       run: |
-        HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
-        wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR" -O /tmp/$HAXE_TAR
+        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
-        sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe
+        sudo mv /tmp/haxe-${HAXE_VERSION} /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup ${{ env.HAXELIB_DIR }}
+        haxelib setup .
 
-    - name: Install Haxe libs
+    - name: Install Haxe libraries
       run: |
-        haxelib install lime ${{ env.LIME_VERSION }} --always
-        haxelib install openfl ${{ env.OPENFL_VERSION }} --always
+        haxelib install lime ${LIME_VERSION} --always
+        haxelib install openfl ${OPENFL_VERSION} --always
         haxelib install hxcpp --always || true
         haxelib install actuate --always || true
         haxelib install flixel --always || true
@@ -64,35 +58,20 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept Android licenses
+    - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-    - name: Prepare keystore from secret
-      if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    - name: Build APK
       run: |
-        mkdir -p $HOME/keystore
-        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $HOME/keystore/upload-keystore.jks
-      shell: bash
+        haxelib run lime build android -final
 
-    - name: Build signed release APK
-      run: |
-        haxelib run lime build android -final \
-          -Dandroid-sdk=$ANDROID_SDK_ROOT \
-          -Dandroid-ndk=$ANDROID_NDK_HOME \
-          -Dandroid-ndk-api=${{ env.ANDROID_API_LEVEL }} \
-          -Dkeystore=$HOME/keystore/upload-keystore.jks \
-          -Dstorepass=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
-          -Dkeyalias=${{ secrets.ANDROID_KEYSTORE_ALIAS }} \
-          -Dkeypass=${{ secrets.ANDROID_KEYSTORE_KEY_PASSWORD }}
-          
     - name: Collect APK
       run: |
-        mkdir -p apk-collection
-        find . -type f -iname "*.apk" -exec cp --parents {} apk-collection/ \;
+        mkdir -p apk
+        find . -name '*.apk' -exec cp {} apk/ \;
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: kadeengine-release-apk
-        path: apk-collection/
-        retention-days: 7
+        name: KadeEngine-APK
+        path: apk/
