@@ -4,50 +4,49 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Download and install Haxe 4.2.5
+    - name: Install dependencies and setup Haxe + Neko
       run: |
+        sudo apt update
+        sudo apt install -y libgc1 neko curl unzip zip
         curl -L https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz -o haxe.tar.gz
         tar -xzf haxe.tar.gz
-        extracted_dir=$(tar -tf haxe.tar.gz | head -1 | cut -f1 -d"/")
-        sudo mv "$extracted_dir" /usr/local/haxe
-        echo "/usr/local/haxe" >> $GITHUB_PATH
+        sudo mv haxe-4.2.5-linux64/haxe /usr/local/bin/haxe
+        sudo mv haxe-4.2.5-linux64/haxelib /usr/local/bin/haxelib
+        sudo chmod +x /usr/local/bin/haxe /usr/local/bin/haxelib
+        haxelib setup /usr/share/haxe/lib
 
-    - name: Verify Haxe
-      run: /usr/local/haxe/haxe --version
-
-    - name: Set up haxelib
+    - name: Install Kade Engine libs
       run: |
-        mkdir -p ~/haxelib
-        haxelib setup ~/haxelib
-
-    - name: Install dependencies
-      run: |
-        haxelib install lime
-        haxelib install openfl
+        haxelib install lime 7.9.0
+        haxelib install openfl 9.1.0
+        haxelib install format
+        haxelib install actuate
         haxelib install flixel
         haxelib install flixel-addons
-        haxelib install extension-webm
-        haxelib install actuate
+        haxelib install flixel-ui
+        haxelib install snow
+        haxelib install nape
+        haxelib install linc
         haxelib install hxcpp
-        haxelib install tjson
         haxelib run lime setup
         haxelib run openfl setup
 
     - name: Build APK
       run: |
-        haxelib run lime build android -final
+        lime build android -debug -final
 
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: KadeEngine-APK
-        path: export/release/android/bin/app-release.apk
+        name: kadeengine-apk
+        path: bin/android/bin/Funkin
