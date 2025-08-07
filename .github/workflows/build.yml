@@ -19,7 +19,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y curl unzip zip neko libneko2
 
-    - name: Download and install Haxe
+    - name: Download and setup Haxe
       run: |
         curl -L -o haxe.tar.gz https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-linux64.tar.gz
         tar -xzf haxe.tar.gz
@@ -29,4 +29,32 @@ jobs:
           mv haxe-4.2.5-linux64/* ~/haxe/
           rm -rf haxe-4.2.5-linux64 haxe.tar.gz
         else
-          echo "Pasta haxe-4.2.5-linux64"
+          echo "Pasta haxe-4.2.5-linux64 não encontrada"
+          exit 1
+        fi
+        echo "$HOME/haxe" >> $GITHUB_PATH
+        haxe --version
+
+    - name: Set HAXE_STD_PATH environment variable
+      run: echo "HAXE_STD_PATH=$HOME/haxe/std" >> $GITHUB_ENV
+
+    - name: Install haxelib and libraries
+      run: |
+        ~/haxe/haxelib setup ~/haxelib
+        ~/haxe/haxelib install lime
+        ~/haxe/haxelib install openfl
+        ~/haxe/haxelib install flixel
+        ~/haxe/haxelib install flixel-addons
+        ~/haxe/haxelib install flixel-ui
+        ~/haxe/haxelib run lime setup
+
+    - name: Build APK
+      run: |
+        export PATH=$PATH:$HOME/haxe
+        lime test android
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kade-engine-apk
+        path: path/para/seu/apk/*.apk
