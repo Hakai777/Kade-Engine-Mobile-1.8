@@ -3,58 +3,81 @@ name: Build Kade Engine APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 env:
   HAXE_VERSION: "4.3.4"
   LIME_VERSION: "8.0.2"
   OPENFL_VERSION: "9.2.2"
+  ANDROID_API_LEVEL: "33"
+  ANDROID_BUILD_TOOLS: "33.0.2"
+  NDK_VERSION: "23.1.7779620"
+  GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+  HAXELIB_DIR: ${{ github.workspace }}/.haxelib
+  MAX_RETRIES: 3
+  RETRY_BASE_SLEEP: 5
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        submodules: true
-        fetch-depth: 0
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: '17'
+        java-version: 17
 
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
-    - name: Install Haxe
+    - name: Download and install Haxe
       run: |
         HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
-        wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR" -O /tmp/$HAXE_TAR
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
         sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup .
+        haxelib setup ${{ env.HAXELIB_DIR }}
 
     - name: Install Haxe libraries
       run: |
         haxelib install lime ${{ env.LIME_VERSION }} --always
         haxelib install openfl ${{ env.OPENFL_VERSION }} --always
+        haxelib install hxcpp --always || true
+        haxelib install actuate --always || true
+        haxelib install flixel --always || true
         haxelib run lime setup android --yes
+
+    - name: Setup Android SDK & NDK
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: ${{ env.ANDROID_API_LEVEL }}
+        build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
+        ndk: ${{ env.NDK_VERSION }}
+
+    - name: Accept Android licenses
+      run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
       run: |
         haxelib run lime build android -final
 
+    - name: Collect APKs
+      run: |
+        mkdir -p apk-collection
+        find . -type f -name "*.apk" -exec cp --parents {} apk-collection/ \; || true
+
     - name: Upload APK artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: kadeengine-apk
-        path: export/android/bin/*.apk
+        path: apk-collection
+        retention-days: 7
