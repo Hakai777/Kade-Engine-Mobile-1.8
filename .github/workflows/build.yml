@@ -45,7 +45,8 @@ jobs:
     - name: Cache haxelib
       uses: actions/cache@v4
       with:
-        path: ${{ env.HAXELIB_DIR }}
+        path: |
+          ${{ env.HAXELIB_DIR }}
         key: haxelib-${{ runner.os }}-${{ hashFiles('**/*.hxml') }}-${{ hashFiles('Project.xml') }}
         restore-keys: |
           haxelib-${{ runner.os }}-
@@ -53,7 +54,8 @@ jobs:
     - name: Cache Gradle
       uses: actions/cache@v4
       with:
-        path: ${{ env.GRADLE_USER_HOME }}
+        path: |
+          ${{ env.GRADLE_USER_HOME }}
         key: gradle-${{ runner.os }}-${{ hashFiles('**/gradle-wrapper.properties') }}
         restore-keys: |
           gradle-${{ runner.os }}-
@@ -61,12 +63,13 @@ jobs:
     - name: Cache Android SDK (tools & build-tools)
       uses: actions/cache@v4
       with:
-        path: ${{ github.workspace }}/Android/Sdk
+        path: |
+          ${{ github.workspace }}/Android/Sdk
         key: android-sdk-${{ runner.os }}-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_BUILD_TOOLS }}
         restore-keys: |
           android-sdk-${{ runner.os }}-
 
-    - name: Install Haxe (${{ env.HAXE_VERSION }})
+    - name: Install Haxe (${ { env.HAXE_VERSION }})
       run: |
         set -e
         HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
@@ -116,7 +119,7 @@ jobs:
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Prepare keystore from secret (optional; set secrets if you want signed release)
-      if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      if: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       run: |
         mkdir -p $HOME/keystore
         echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $HOME/keystore/upload-keystore.jks
