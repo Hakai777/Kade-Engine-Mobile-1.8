@@ -56,6 +56,10 @@ jobs:
         haxelib install extension-webm --always || true
         haxelib run lime setup android --yes
 
+    - name: Build extension-webm for Android
+      run: |
+        haxelib run extension-webm rebuild android
+
     - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
       with:
