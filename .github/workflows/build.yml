@@ -46,19 +46,21 @@ jobs:
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
-        haxelib install hxcpp --always || true
-        haxelib install actuate --always || true
-        haxelib install flixel --always || true
-        haxelib install flixel-addons --always || true
-        haxelib install flixel-ui --always || true
-        haxelib install polymod --always || true
-        haxelib install hscript --always || true
-        haxelib install extension-webm 1.0.0 --always || true
+        haxelib install hxcpp --always
+        haxelib install actuate --always
+        haxelib install flixel --always
+        haxelib install flixel-addons --always
+        haxelib install flixel-ui --always
+        haxelib install polymod --always
+        haxelib install hscript --always
+        haxelib install extension-webm --always
         haxelib run lime setup android --yes
 
+    - name: List installed haxelibs
+      run: haxelib list
+
     - name: Build extension-webm for Android
-      run: |
-        haxelib run extension-webm rebuild android || true
+      run: haxelib run extension-webm rebuild android
 
     - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
