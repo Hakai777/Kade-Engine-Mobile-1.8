@@ -1,4 +1,4 @@
-name: Build Kade Engine APK - Básico
+name: Build Kade Engine APK (Super Basic)
 
 on:
   push:
@@ -34,15 +34,15 @@ jobs:
 
     - name: Install Haxe
       run: |
-        cd /tmp
-        wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
-        tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
-        sudo mv haxe-${HAXE_VERSION} /opt/haxe
+        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
+        wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
+        tar -xzf /tmp/$HAXE_TAR -C /tmp
+        sudo mv /tmp/haxe-${HAXE_VERSION} /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup $GITHUB_WORKSPACE/.haxelib
+        haxelib setup .
 
-    - name: Install Haxe libraries
+    - name: Install Haxe libs
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -72,5 +72,5 @@ jobs:
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: kadeengine-apk
+        name: KadeEngine-APK
         path: apk/
