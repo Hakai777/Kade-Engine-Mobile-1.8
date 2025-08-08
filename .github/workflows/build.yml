@@ -34,10 +34,11 @@ jobs:
 
     - name: Install Haxe
       run: |
-        HAXE_TAR="haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz"
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/$HAXE_TAR -O /tmp/$HAXE_TAR
+        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
-        sudo mv /tmp/haxe-${{ env.HAXE_VERSION }} /opt/haxe
+        extracted_dir=$(tar -tzf /tmp/$HAXE_TAR | head -1 | cut -f1 -d"/")
+        sudo mv /tmp/$extracted_dir /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
@@ -58,12 +59,11 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept Android licenses
+    - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
-      run: |
-        haxelib run lime build android -final
+      run: haxelib run lime build android -final
 
     - name: Collect APK
       run: |
