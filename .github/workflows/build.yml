@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (Basic & Funcional)
+name: Build Kade Engine APK - Básico
 
 on:
   push:
@@ -27,22 +27,20 @@ jobs:
         distribution: temurin
         java-version: 17
 
-    - name: Install system dependencies
+    - name: Install dependencies
       run: |
         sudo apt-get update -y
         sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
-    - name: Download and install Haxe
+    - name: Install Haxe
       run: |
-        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
-        tar -xzf /tmp/$HAXE_TAR -C /tmp
-        # Lista a pasta que foi extraída pra garantir o nome correto
-        ls /tmp
-        sudo mv /tmp/haxe_${HAXE_VERSION} /opt/haxe
+        cd /tmp
+        wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
+        tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
+        sudo mv haxe-${HAXE_VERSION} /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup .
+        haxelib setup $GITHUB_WORKSPACE/.haxelib
 
     - name: Install Haxe libraries
       run: |
@@ -60,7 +58,7 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept Android licenses
+    - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
@@ -74,5 +72,5 @@ jobs:
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: KadeEngine-APK
+        name: kadeengine-apk
         path: apk/
