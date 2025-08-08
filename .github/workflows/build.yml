@@ -1,8 +1,8 @@
-name: Build Kade Engine APK (Basic)
+name: Build Kade Engine APK - Básico
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repo
       uses: actions/checkout@v4
 
     - name: Setup Java 17
@@ -32,18 +32,17 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
-    - name: Install Haxe
+    - name: Install Haxe manually
       run: |
-        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
-        tar -xzf /tmp/$HAXE_TAR -C /tmp
-        extracted_dir=$(tar -tzf /tmp/$HAXE_TAR | head -1 | cut -f1 -d"/")
-        sudo mv /tmp/$extracted_dir /opt/haxe
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz -O haxe.tar.gz
+        mkdir haxe
+        tar -xzf haxe.tar.gz -C haxe --strip-components=1
+        sudo mv haxe /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Install Haxe libraries
+    - name: Install Haxe libs
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -59,15 +58,15 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept licenses
+    - name: Accept Android Licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
       run: haxelib run lime build android -final
 
-    - name: Collect APK
+    - name: Collect APK artifact
       run: |
-        mkdir -p apk
+        mkdir apk
         find . -name '*.apk' -exec cp {} apk/ \;
 
     - name: Upload APK artifact
