@@ -59,10 +59,9 @@ jobs:
     - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
       with:
-        packages: |
-          platforms;android-${{ env.ANDROID_API_LEVEL }}
-          build-tools;${{ env.ANDROID_BUILD_TOOLS }}
-          ndk;${{ env.NDK_VERSION }}
+        api-level: ${{ env.ANDROID_API_LEVEL }}
+        build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
+        ndk: ${{ env.NDK_VERSION }}
 
     - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -76,10 +75,19 @@ jobs:
     - name: List APK files for debug
       run: find . -name '*.apk' || true
 
+    - name: Print buildlog.txt (debug)
+      if: always()
+      run: cat buildlog.txt || true
+
     - name: Collect APK
       run: |
         mkdir -p apk
-        find . -name '*.apk' -exec cp {} apk/ \;
+        APK_PATH=$(find . -type f -name "*.apk" | head -n 1)
+        if [ -n "$APK_PATH" ]; then
+          cp "$APK_PATH" apk/
+        else
+          echo "Nenhum APK encontrado!"
+        fi
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
