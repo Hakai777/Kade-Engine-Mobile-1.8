@@ -1,8 +1,9 @@
-name: Build Kade Engine APK - Básico
+name: Build & Release Kade Engine APK
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*.*.*'  # roda só quando criar tag tipo v1.0.0
   workflow_dispatch:
 
 env:
@@ -18,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Setup Java 17
@@ -32,17 +33,17 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
-    - name: Install Haxe manually
+    - name: Install Haxe
       run: |
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz -O haxe.tar.gz
-        mkdir haxe
-        tar -xzf haxe.tar.gz -C haxe --strip-components=1
-        sudo mv haxe /opt/haxe
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz -O /tmp/haxe.tar.gz
+        mkdir /tmp/haxe_tmp
+        tar -xzf /tmp/haxe.tar.gz -C /tmp/haxe_tmp --strip-components=1
+        sudo mv /tmp/haxe_tmp /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Install Haxe libs
+    - name: Install Haxe libraries
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -58,19 +59,27 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept Android Licenses
+    - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-    - name: Build APK
-      run: haxelib run lime build android -final
-
-    - name: Collect APK artifact
+    - name: Prepare keystore (optional)
+      if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
       run: |
-        mkdir apk
+        mkdir -p $HOME/keystore
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $HOME/keystore/upload-keystore.jks
+        ls -l $HOME/keystore
+
+    - name: Build APK (release)
+      run: |
+        haxelib run lime build android -final
+
+    - name: Collect APK
+      run: |
+        mkdir -p apk
         find . -name '*.apk' -exec cp {} apk/ \;
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: KadeEngine-APK
+        name: KadeEngine-APK-Release
         path: apk/
