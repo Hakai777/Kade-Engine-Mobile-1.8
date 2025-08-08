@@ -59,9 +59,10 @@ jobs:
     - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
       with:
-        api-level: ${{ env.ANDROID_API_LEVEL }}
-        build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
-        ndk: ${{ env.NDK_VERSION }}
+        packages: |
+          platforms;android-${{ env.ANDROID_API_LEVEL }}
+          build-tools;${{ env.ANDROID_BUILD_TOOLS }}
+          ndk;${{ env.NDK_VERSION }}
 
     - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -71,6 +72,9 @@ jobs:
         export ANDROID_SDK="$ANDROID_SDK_ROOT"
         export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }}"
         haxelib run lime build android -final -verbose | tee buildlog.txt
+
+    - name: List APK files for debug
+      run: find . -name '*.apk' || true
 
     - name: Collect APK
       run: |
