@@ -70,7 +70,7 @@ jobs:
       run: |
         export ANDROID_SDK="$ANDROID_SDK_ROOT"
         export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }}"
-        haxelib run lime build android -final
+        haxelib run lime build android -final -verbose | tee buildlog.txt
 
     - name: Collect APK
       run: |
