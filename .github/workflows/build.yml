@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (Super Basic)
+name: Build Kade Engine APK (Basic)
 
 on:
   push:
@@ -35,14 +35,14 @@ jobs:
     - name: Install Haxe
       run: |
         HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-        wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
-        sudo mv /tmp/haxe-${HAXE_VERSION} /opt/haxe
+        sudo mv /tmp/haxe-${HAXE_VERSION}-linux64 /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Install Haxe libs
+    - name: Install Haxe libraries
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -62,7 +62,8 @@ jobs:
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
-      run: haxelib run lime build android -final
+      run: |
+        haxelib run lime build android -final
 
     - name: Collect APK
       run: |
