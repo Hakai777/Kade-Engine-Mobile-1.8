@@ -53,12 +53,11 @@ jobs:
         haxelib install flixel-ui --always
         haxelib install polymod --always
         haxelib install hscript --always
-        # Se quiser testar extension-webm depois, descomenta aqui
-        # haxelib install extension-webm --always
+        # haxelib install extension-webm --always  # Removido temporariamente para evitar erros
         haxelib run lime setup android --yes
 
     - name: Setup Android SDK & NDK
-      uses: malinskiy/action-android@v2
+      uses: android-actions/setup-android@v3
       with:
         api-level: ${{ env.ANDROID_API_LEVEL }}
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
@@ -72,15 +71,19 @@ jobs:
         export ANDROID_SDK="$ANDROID_SDK_ROOT"
         export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }}"
         haxelib run lime build android -final -verbose | tee buildlog.txt
-        echo "### Listando todos os APKs encontrados ###"
-        find . -name '*.apk'
+
+    - name: List APK files for debug
+      run: find . -name '*.apk' || true
+
+    - name: Print buildlog.txt (debug)
+      if: always()
+      run: cat buildlog.txt || true
 
     - name: Collect APK
       run: |
         mkdir -p apk
         APK_PATH=$(find . -type f -name "*.apk" | head -n 1)
         if [ -n "$APK_PATH" ]; then
-          echo "APK encontrado em: $APK_PATH"
           cp "$APK_PATH" apk/
         else
           echo "Nenhum APK encontrado!"
@@ -91,7 +94,3 @@ jobs:
       with:
         name: KadeEngine-APK
         path: apk/
-
-    - name: Print buildlog.txt (debug)
-      if: always()
-      run: cat buildlog.txt || true
