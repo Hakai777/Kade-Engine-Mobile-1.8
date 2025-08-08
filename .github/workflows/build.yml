@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (Basic)
+name: Build Kade Engine APK (Fixed)
 
 on:
   push:
@@ -53,41 +53,35 @@ jobs:
         haxelib install flixel-ui --always
         haxelib install polymod --always
         haxelib install hscript --always
-        # haxelib install extension-webm --always  # Removido temporariamente para evitar erros
+        # Se quiser, pode instalar extension-webm aqui, mas pode tirar para evitar erros
         haxelib run lime setup android --yes
 
-    - name: Setup Android SDK & NDK
-      uses: android-actions/setup-android@v3
-      with:
-        api-level: ${{ env.ANDROID_API_LEVEL }}
-        build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
-        ndk: ${{ env.NDK_VERSION }}
-
+    - name: Install Android SDK & NDK manually
+      run: |
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+        cd $ANDROID_SDK_ROOT/cmdline-tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        unzip -o cmdline-tools.zip
+        rm cmdline-tools.zip
+        mv cmdline-tools latest
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
+        
     - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
       run: |
         export ANDROID_SDK="$ANDROID_SDK_ROOT"
-        export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }}"
+        export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/${NDK_VERSION}"
         haxelib run lime build android -final -verbose | tee buildlog.txt
 
-    - name: List APK files for debug
-      run: find . -name '*.apk' || true
+    - name: Find APK files
+      run: find . -type f -name '*.apk' -print
 
-    - name: Print buildlog.txt (debug)
-      if: always()
-      run: cat buildlog.txt || true
-
-    - name: Collect APK
+    - name: Copy APK to apk folder
       run: |
         mkdir -p apk
-        APK_PATH=$(find . -type f -name "*.apk" | head -n 1)
-        if [ -n "$APK_PATH" ]; then
-          cp "$APK_PATH" apk/
-        else
-          echo "Nenhum APK encontrado!"
-        fi
+        find . -type f -name '*.apk' -exec cp {} apk/ \;
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
