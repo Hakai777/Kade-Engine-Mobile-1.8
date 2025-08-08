@@ -1,33 +1,31 @@
-name: Teste básico Haxe
+name: Teste Básico Haxe
 
 on:
   workflow_dispatch:
+
+env:
+  HAXE_VERSION: "4.3.4"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout código
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Instalar dependências básicas
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget unzip neko libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
+      run: sudo apt-get update && sudo apt-get install -y wget unzip
 
-    - name: Baixar e instalar Haxe 4.3.4
+    - name: Baixar e instalar Haxe
       run: |
-        HAXE_VERSION=4.3.4
         HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-        wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR}" -O /tmp/${HAXE_TAR}
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
         tar -xzf /tmp/${HAXE_TAR} -C /tmp
-        sudo mv /tmp/haxe-${HAXE_VERSION} /opt/haxe
+        sudo mv /tmp/haxe-${HAXE_VERSION}-linux64 /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Testar Haxe e Haxelib
-      run: |
-        haxe -version
-        haxelib list
+    - name: Testar Haxe
+      run: haxe --version
