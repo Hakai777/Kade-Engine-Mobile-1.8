@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (Básico Corrigido)
+name: Build Kade Engine APK (Basic)
 
 on:
   push:
@@ -37,7 +37,8 @@ jobs:
         HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
         wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
-        sudo mv /tmp/haxe_* /opt/haxe
+        HAXE_DIR=$(ls -d /tmp/haxe_*)
+        sudo mv "$HAXE_DIR" /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
@@ -46,6 +47,9 @@ jobs:
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
+        haxelib install hxcpp --always || true
+        haxelib install actuate --always || true
+        haxelib install flixel --always || true
         haxelib run lime setup android --yes
 
     - name: Setup Android SDK & NDK
