@@ -1,4 +1,4 @@
-name: Build Kade Engine APK Basic
+name: Build Kade Engine APK (Basic & Funcional)
 
 on:
   push:
@@ -27,26 +27,30 @@ jobs:
         distribution: temurin
         java-version: 17
 
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update -y
         sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
-    - name: Install Haxe
+    - name: Download and install Haxe
       run: |
         HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
         wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/$HAXE_TAR -O /tmp/$HAXE_TAR
         tar -xzf /tmp/$HAXE_TAR -C /tmp
-        sudo mv /tmp/haxe-${HAXE_VERSION} /opt/haxe
+        # Lista a pasta que foi extraída pra garantir o nome correto
+        ls /tmp
+        sudo mv /tmp/haxe_${HAXE_VERSION} /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Install Haxe libs
+    - name: Install Haxe libraries
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
         haxelib install hxcpp --always || true
+        haxelib install actuate --always || true
+        haxelib install flixel --always || true
         haxelib run lime setup android --yes
 
     - name: Setup Android SDK & NDK
@@ -56,7 +60,7 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept licenses
+    - name: Accept Android licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
@@ -67,8 +71,8 @@ jobs:
         mkdir -p apk
         find . -name '*.apk' -exec cp {} apk/ \;
 
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: kadeengine-apk
+        name: KadeEngine-APK
         path: apk/
