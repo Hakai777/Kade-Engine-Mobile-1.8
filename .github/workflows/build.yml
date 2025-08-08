@@ -1,10 +1,9 @@
-name: Build Kade Engine APK
+name: Build Kade Engine APK (Basic)
 
 on:
   push:
-    tags:
-      - 'v*'          # Roda quando criar tag tipo v1.0, v1.1, etc
-  workflow_dispatch:   # Pode rodar manualmente pela aba Actions
+    branches: [main]
+  workflow_dispatch:
 
 env:
   HAXE_VERSION: "4.3.4"
@@ -19,13 +18,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependencies
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+
+    - name: Install dependencies (including neko)
       run: |
-        sudo apt-get update
-        sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
+        sudo apt-get update -y
+        sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev neko
 
     - name: Install Haxe
       run: |
@@ -37,11 +42,13 @@ jobs:
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Install Haxe libs
+    - name: Install Haxe libraries
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
         haxelib install hxcpp --always || true
+        haxelib install actuate --always || true
+        haxelib install flixel --always || true
         haxelib run lime setup android --yes
 
     - name: Setup Android SDK & NDK
@@ -51,18 +58,19 @@ jobs:
         build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
         ndk: ${{ env.NDK_VERSION }}
 
-    - name: Accept Android licenses
-      run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+    - name: Accept licenses
+      run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build APK
-      run: haxelib run lime build android -final
+      run: |
+        haxelib run lime build android -final
 
     - name: Collect APK
       run: |
         mkdir -p apk
         find . -name '*.apk' -exec cp {} apk/ \;
 
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: KadeEngine-APK
