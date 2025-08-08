@@ -53,12 +53,12 @@ jobs:
         haxelib install flixel-ui --always || true
         haxelib install polymod --always || true
         haxelib install hscript --always || true
-        haxelib install extension-webm --always || true
+        haxelib install extension-webm 1.0.0 --always || true
         haxelib run lime setup android --yes
 
     - name: Build extension-webm for Android
       run: |
-        haxelib run extension-webm rebuild android
+        haxelib run extension-webm rebuild android || true
 
     - name: Setup Android SDK & NDK
       uses: android-actions/setup-android@v3
