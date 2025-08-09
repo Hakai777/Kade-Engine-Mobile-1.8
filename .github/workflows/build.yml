@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (com extension-webm 0.0.5)
+name: Build Kade Engine APK (With extension-webm)
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
         haxelib install flixel-ui --always
         haxelib install polymod --always
         haxelib install hscript --always
-        haxelib install extension-webm 0.0.5 --always
+        haxelib git extension-webm https://github.com/KadeDev/extension-webm
         haxelib run lime rebuild extension-webm android
         haxelib run lime setup android --yes
 
@@ -66,7 +66,7 @@ jobs:
         rm cmdline-tools.zip
         mv cmdline-tools latest
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
-        
+
     - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
@@ -77,14 +77,14 @@ jobs:
         echo "🏗️ Iniciando build do APK..."
         haxelib run lime build android -final -verbose | tee buildlog.txt
 
-    - name: Procurar APK gerado
+    - name: Procurar APK
       run: |
         echo "🔍 Procurando APK..."
         find . -type f -name "*.apk" -print || echo "Nenhum APK encontrado!"
         echo "📜 Trechos do buildlog com 'apk':"
         grep -i apk buildlog.txt || echo "Nenhum trecho com 'apk' no log"
 
-    - name: Copiar APK para pasta apk/
+    - name: Copiar APK para pasta apk
       run: |
         mkdir -p apk
         APK_PATH=$(find . -type f -name '*.apk' | head -n 1)
