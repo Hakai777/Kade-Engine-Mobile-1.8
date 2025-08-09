@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (With extension-webm)
+name: Build Kade Engine APK (Legacy Versions)
 
 on:
   push:
@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
 
 env:
-  HAXE_VERSION: "4.3.4"
-  LIME_VERSION: "8.0.2"
-  OPENFL_VERSION: "9.2.2"
+  HAXE_VERSION: "4.1.5"      # Versão recomendada
+  LIME_VERSION: "7.9.0"      # Versão compatível com Kade 1.8
+  OPENFL_VERSION: "8.0.2"    # Alternativa mais compatível (ajuste se necessário)
   ANDROID_API_LEVEL: "33"
   ANDROID_BUILD_TOOLS: "33.0.2"
-  NDK_VERSION: "23.1.7779620"
+  NDK_VERSION: "21.4.7075529" # Versão mais compatível com WebM rebuild
 
 jobs:
   build:
@@ -27,22 +27,20 @@ jobs:
         distribution: temurin
         java-version: 17
 
-    - name: Install dependencies (including neko)
+    - name: Install dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev neko
+        sudo apt-get install -y wget unzip g++-multilib gcc-multilib neko libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev
 
     - name: Install Haxe
       run: |
-        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
-        tar -xzf /tmp/${HAXE_TAR} -C /tmp
+        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz -O /tmp/haxe.tar.gz
+        tar -xzf /tmp/haxe.tar.gz -C /tmp
         sudo mv /tmp/haxe_* /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup .
 
-    - name: Install Haxe libraries
+    - name: Install Haxe libraries (legacy)
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -57,15 +55,17 @@ jobs:
         haxelib run lime rebuild extension-webm android
         haxelib run lime setup android --yes
 
-    - name: Install Android SDK & NDK manually
+    - name: Setup Android SDK & NDK
       run: |
         mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
         cd $ANDROID_SDK_ROOT/cmdline-tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        wget https://dl.google.com/android/repository/commandlinetools-linux-latest.zip -O cmdline-tools.zip
         unzip -o cmdline-tools.zip
         rm cmdline-tools.zip
         mv cmdline-tools latest
-        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
+            "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
 
     - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -74,27 +74,26 @@ jobs:
       run: |
         export ANDROID_SDK="$ANDROID_SDK_ROOT"
         export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/${NDK_VERSION}"
-        echo "🏗️ Iniciando build do APK..."
         haxelib run lime build android -final -verbose | tee buildlog.txt
 
-    - name: Procurar APK
+    - name: Log and locate APK
       run: |
-        echo "🔍 Procurando APK..."
-        find . -type f -name "*.apk" -print || echo "Nenhum APK encontrado!"
-        echo "📜 Trechos do buildlog com 'apk':"
-        grep -i apk buildlog.txt || echo "Nenhum trecho com 'apk' no log"
+        echo "Arquivos gerados (com .apk):"
+        find . -type f -name '*.apk' -print
+        echo "Referências a 'apk' no log:"
+        grep -i apk buildlog.txt || echo "Nenhuma referência encontrada"
 
-    - name: Copiar APK para pasta apk
+    - name: Copy and upload APK
       run: |
         mkdir -p apk
-        APK_PATH=$(find . -type f -name '*.apk' | head -n 1)
-        if [ -z "$APK_PATH" ]; then
-          echo "❌ Nenhum APK encontrado!"
+        APK=$(find . -type f -name '*.apk' | head -n 1)
+        if [ -n "$APK" ]; then
+          echo "APK encontrado em: $APK"
+          cp "$APK" apk/
+        else
+          echo "APK não encontrado!"
           exit 1
         fi
-        echo "✅ APK encontrado: $APK_PATH"
-        cp "$APK_PATH" apk/
-
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
