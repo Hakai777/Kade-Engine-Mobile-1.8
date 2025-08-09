@@ -42,7 +42,7 @@ jobs:
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Install Haxe libraries
+    - name: Install Haxe libraries and rebuild extension-webm
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -53,8 +53,9 @@ jobs:
         haxelib install flixel-ui --always
         haxelib install polymod --always
         haxelib install hscript --always
-        haxelib install extension-webm 0.0.5 --always  # <-- Instalação da versão 0.0.5
+        haxelib install extension-webm 0.0.5 --always
         haxelib run lime setup android --yes
+        haxelib run lime rebuild extension-webm android
 
     - name: Install Android SDK & NDK
       run: |
