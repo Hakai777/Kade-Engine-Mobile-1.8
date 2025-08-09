@@ -53,6 +53,7 @@ jobs:
         haxelib install flixel-ui --always
         haxelib install polymod --always
         haxelib install hscript --always
+        haxelib install extension-webm 0.0.5 --always  # <-- Instalação da versão 0.0.5
         haxelib run lime setup android --yes
 
     - name: Install Android SDK & NDK
