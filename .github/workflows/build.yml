@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (With WebM Fix)
+name: Build Kade Engine APK (com extension-webm 0.0.5)
 
 on:
   push:
@@ -42,7 +42,7 @@ jobs:
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup .
 
-    - name: Install Haxe libraries (with extension-webm fix)
+    - name: Install Haxe libraries
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -53,8 +53,8 @@ jobs:
         haxelib install flixel-ui --always
         haxelib install polymod --always
         haxelib install hscript --always
-        haxelib install extension-webm --always
-        haxelib run extension-webm rebuild android
+        haxelib install extension-webm 0.0.5 --always
+        haxelib run lime rebuild extension-webm android
         haxelib run lime setup android --yes
 
     - name: Install Android SDK & NDK manually
