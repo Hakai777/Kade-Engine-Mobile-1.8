@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (KE 1.8 Original)
+name: Build Kade Engine 1.8 APK (Original Setup)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 env:
   HAXE_VERSION: "4.1.5"
   LIME_VERSION: "7.9.0"
-  OPENFL_VERSION: "8.0.2"
+  OPENFL_VERSION: "8.9.7"
   ANDROID_API_LEVEL: "33"
   ANDROID_BUILD_TOOLS: "33.0.2"
   NDK_VERSION: "21.4.7075529"
@@ -18,21 +18,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Java 17
+    - name: ☕ Setup Java 8
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: 17
+        java-version: 8
 
-    - name: Install dependencies (including neko)
+    - name: 📦 Install dependencies
       run: |
         sudo apt-get update -y
         sudo apt-get install -y wget unzip libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev neko
 
-    - name: Install Haxe
+    - name: 🛠 Install Haxe
       run: |
         HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
         wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
@@ -40,9 +40,10 @@ jobs:
         sudo mv /tmp/haxe_* /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup .
+        mkdir -p ~/.haxelib
+        haxelib setup ~/.haxelib
 
-    - name: Install Haxe libraries (KE 1.8)
+    - name: 📚 Install Haxe libraries (Kade Engine 1.8)
       run: |
         haxelib install lime ${LIME_VERSION} --always
         haxelib install openfl ${OPENFL_VERSION} --always
@@ -57,7 +58,7 @@ jobs:
         haxelib run lime rebuild extension-webm android
         haxelib run lime setup android --yes
 
-    - name: Install Android SDK & NDK manually
+    - name: 📥 Install Android SDK & NDK
       run: |
         mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
         cd $ANDROID_SDK_ROOT/cmdline-tools
@@ -66,15 +67,37 @@ jobs:
         rm cmdline-tools.zip
         mv cmdline-tools latest
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
-
-    - name: Accept licenses
+        
+    - name: ✅ Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-    - name: Build APK
+    - name: 🏗 Build APK
       run: |
         export ANDROID_SDK="$ANDROID_SDK_ROOT"
         export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/${NDK_VERSION}"
+        echo "🏗️ Iniciando build do APK..."
         haxelib run lime build android -final -verbose | tee buildlog.txt
 
-    - name: Find APK
-      run: find . -type f -name "*.apk" -print || echo "Nenhum APK encontrado!"
+    - name: 🔍 Procurar APK
+      run: |
+        echo "📂 Procurando APK gerado..."
+        find . -type f -name "*.apk" -print || echo "Nenhum APK encontrado!"
+        echo "📜 Trechos do buildlog com 'apk':"
+        grep -i apk buildlog.txt || echo "Nenhum trecho com 'apk' no log"
+
+    - name: 📦 Copiar APK
+      run: |
+        mkdir -p apk
+        APK_PATH=$(find . -type f -name '*.apk' | head -n 1)
+        if [ -z "$APK_PATH" ]; then
+          echo "❌ Nenhum APK encontrado!"
+          exit 1
+        fi
+        echo "✅ APK encontrado: $APK_PATH"
+        cp "$APK_PATH" apk/
+
+    - name: ☁️ Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: KadeEngine-1.8-APK
+        path: apk/
