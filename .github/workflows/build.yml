@@ -15,55 +15,50 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: "11"
-          distribution: "temurin"
-
-      - name: Cache haxelib
-        uses: actions/cache@v3
-        with:
-          path: ~/.haxelib
-          key: haxelib-${{ env.HAXE_VERSION }}
-
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git wget unzip tar libusb-1.0-0
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository ppa:openjdk-r/ppa -y
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jdk wget tar unzip lib32stdc++6 lib32z1
 
       - name: Install Haxe
         run: |
           wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
           tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
-          sudo mv haxe-${HAXE_VERSION} /usr/lib/haxe
+          sudo mv haxe-${HAXE_VERSION}-linux64 /usr/lib/haxe
           sudo ln -s /usr/lib/haxe/haxe /usr/bin/haxe
           sudo ln -s /usr/lib/haxe/haxelib /usr/bin/haxelib
 
-      - name: Install haxelibs
+      - name: Install Haxe libraries
         run: |
           haxelib setup ~/.haxelib
           haxelib install lime ${LIME_VERSION}
           haxelib install openfl ${OPENFL_VERSION}
-          haxelib git polymod https://github.com/BoloVEVO/polymod
-          haxelib git extension-webm https://github.com/KadeDev/extension-webm
           haxelib install flixel
           haxelib install flixel-addons
           haxelib install flixel-ui
+          haxelib git polymod https://github.com/BoloVEVO/polymod
           haxelib install tjson
+          haxelib install hxjsonast
           haxelib install hxcpp
+          haxelib install extension-webm
           haxelib install actuate
-          haxelib install newgrounds
 
-      - name: Install Android SDK & NDK
+      - name: Setup Android SDK
         run: |
-          haxelib run lime setup android --yes
-          haxelib run lime config ANDROID_SDK $ANDROID_HOME
-          haxelib run lime config ANDROID_NDK $ANDROID_NDK_HOME
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          mkdir -p ${ANDROID_HOME}/cmdline-tools
+          unzip cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools
+          mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses
+          ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}"
 
       - name: Build APK
         run: |
