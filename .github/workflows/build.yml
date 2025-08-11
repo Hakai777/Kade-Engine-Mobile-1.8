@@ -52,7 +52,7 @@ jobs:
         haxelib install flixel-ui 2.3.3 --always
         haxelib install hxcpp 4.1.15 --always
         haxelib install actuate 1.8.9 --always
-        haxelib install polymod 1.3.2 --always
+        haxelib git polymod https://github.com/MasterEric/polymod.git
         haxelib install hscript 2.4.0 --always
         haxelib git extension-webm https://github.com/KadeDev/extension-webm
         haxelib run lime rebuild extension-webm android
@@ -67,7 +67,7 @@ jobs:
         rm cmdline-tools.zip
         mv cmdline-tools latest
         yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
-        
+
     - name: Accept licenses
       run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
