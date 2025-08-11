@@ -52,15 +52,11 @@ jobs:
         haxelib install flixel-ui 2.3.3 --always
         haxelib install hxcpp 4.1.15 --always
         haxelib install actuate 1.8.9 --always
-        haxelib install polymod --always
+        haxelib install polymod 1.3.2 --always
         haxelib install hscript 2.4.0 --always
+        haxelib run lime setup android --yes
         haxelib git extension-webm https://github.com/KadeDev/extension-webm
         haxelib run lime rebuild extension-webm android
-        haxelib run lime setup android --yes
-
-    - name: Override polymod with BoloVEVO fork
-      run: |
-        haxelib git polymod https://github.com/BoloVEVO/polymod.git
 
     - name: Install Android SDK & NDK manually
       run: |
