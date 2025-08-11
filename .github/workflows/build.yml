@@ -12,6 +12,7 @@ env:
   ANDROID_API_LEVEL: "33"
   ANDROID_BUILD_TOOLS: "33.0.2"
   NDK_VERSION: "21.4.7075529"
+  ANDROID_SDK_ROOT: "$HOME/Android/Sdk"
 
 jobs:
   build:
@@ -40,7 +41,7 @@ jobs:
         sudo mv /tmp/haxe_* /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup ~/.haxelib
+        haxelib setup ~/.haxelib_repo || true
 
     - name: Install Haxe libraries (Kade Engine 1.8)
       run: |
