@@ -34,11 +34,9 @@ jobs:
           sudo apt-get install -y wget curl unzip git build-essential ca-certificates \
             libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev \
             neko || true
-          # ensure loader cache updated
           sudo ldconfig || true
           echo "NEKO libs:"
           ldconfig -p | grep libneko || true
-          # safe symlink if lib inside /usr/lib/neko
           if [ -f /usr/lib/neko/libneko.so.2 ] && [ ! -f /usr/lib/libneko.so.2 ]; then
             sudo ln -sf /usr/lib/neko/libneko.so.2 /usr/lib/libneko.so.2 || true
           fi
@@ -46,16 +44,13 @@ jobs:
       - name: Download & install older Android cmdline-tools (Java 8 friendly)
         run: |
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-          # older command line tools that work with Java 8
           curl -L -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
           unzip -q /tmp/cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-          # handle different zip layouts (tools/ or cmdline-tools/)
           if [ -d "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" ]; then
             mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
           elif [ -d "$ANDROID_SDK_ROOT/cmdline-tools/tools" ]; then
             mv "$ANDROID_SDK_ROOT/cmdline-tools/tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
           else
-            # fallback: pick the first dir that's not 'latest'
             for d in "$ANDROID_SDK_ROOT/cmdline-tools"/*; do
               if [ -d "$d" ] && [ "$(basename "$d")" != "latest" ]; then
                 mv "$d" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
@@ -63,19 +58,21 @@ jobs:
               fi
             done
           fi
+          # Não sobrescreve o PATH no env do workflow, só usa aqui no run
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
             "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
 
       - name: Accept Android SDK licenses
-        run: yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+        run: |
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
       - name: Install Haxe
         run: |
           HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
           wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR}" -O "/tmp/${HAXE_TAR}"
           tar -xzf "/tmp/${HAXE_TAR}" -C /tmp
-          # detect top dir inside tar (handles different naming)
           HAXE_DIR=$(tar -tf "/tmp/${HAXE_TAR}" | head -n1 | cut -f1 -d"/")
           sudo mv "/tmp/${HAXE_DIR}" /opt/haxe
           sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
@@ -87,9 +84,8 @@ jobs:
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${PATH}
+          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:$PATH
         run: |
-          # create repo dir if missing
           mkdir -p ~/.haxelib_repo
           haxelib install lime ${LIME_VERSION} --always
           haxelib install openfl ${OPENFL_VERSION} --always
@@ -99,14 +95,13 @@ jobs:
           haxelib install hxcpp 4.1.15 --always || true
           haxelib install actuate 1.8.9 --always || true
           haxelib install hscript 2.4.0 --always || true
-          # setup android target for lime
           haxelib run lime setup android --yes
 
       - name: Build APK (final)
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:${PATH}
+          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:$PATH
         run: |
           echo "🏗️ Starting build (verbose)..."
           haxelib run lime build android -final -verbose | tee buildlog.txt
