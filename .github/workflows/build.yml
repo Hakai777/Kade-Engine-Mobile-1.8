@@ -2,68 +2,64 @@ name: Build Kade Engine APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 env:
   HAXE_VERSION: "4.1.5"
   LIME_VERSION: "7.9.0"
   OPENFL_VERSION: "8.9.7"
-  ANDROID_API_LEVEL: "33"
-  ANDROID_BUILD_TOOLS: "33.0.2"
+  ANDROID_API_LEVEL: "30"           # API compatível com SDK antigo
+  ANDROID_BUILD_TOOLS: "30.0.3"     # Build tools compatível
   NDK_VERSION: "21.4.7075529"
-  JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.462-8/x64
+  ANDROID_SDK_ROOT: ${{ github.workspace }}/Android/Sdk
+  JAVA_HOME_8_X64: "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.462-8/x64"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/Android/Sdk
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-8-jdk unzip
+      - name: Setup Java 8
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 8
 
-    - name: Install Android SDK command-line tools
-      run: |
-        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-        curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-        unzip -q commandlinetools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-        mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+      - name: Download and setup Android SDK command-line tools (older version)
+        run: |
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
+          unzip commandlinetools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
+          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
 
-    - name: Setup Android SDK packages
-      run: |
-        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
-      env:
-        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+      - name: Install Haxe
+        run: |
+          HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
+          wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
+          tar -xzf /tmp/${HAXE_TAR} -C /tmp
+          sudo mv /tmp/haxe_${HAXE_VERSION}-linux64 /opt/haxe
+          sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
+          sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
+          haxelib setup ~/.haxelib_repo || true
 
-    - name: Install Haxe
-      run: |
-        HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-        wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
-        tar -xzf /tmp/${HAXE_TAR} -C /tmp
-        sudo mv /tmp/haxe-${HAXE_VERSION} /opt/haxe
-        sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
-        sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-        haxelib setup ~/.haxelib_repo || true
-      env:
-        HAXE_VERSION: ${{ env.HAXE_VERSION }}
+      - name: Setup Lime and OpenFL libs
+        run: |
+          haxelib install lime ${LIME_VERSION}
+          haxelib install openfl ${OPENFL_VERSION}
+          haxelib run lime setup android
 
-    - name: Setup lime and openfl
-      run: |
-        haxelib install lime ${LIME_VERSION}
-        haxelib install openfl ${OPENFL_VERSION}
-        haxelib run lime setup android
-        haxelib run lime install
-      env:
-        LIME_VERSION: ${{ env.LIME_VERSION }}
-        OPENFL_VERSION: ${{ env.OPENFL_VERSION }}
+      - name: Build APK
+        run: |
+          lime build android -debug
 
-    - name: Build APK
-      run: |
-        lime build android -debug
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: kade-engine-apk
+          path: bin/android/bin/KadeEngine-debug.apk
