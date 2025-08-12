@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (KE 1.8 Original)
+name: Build Kade Engine APK (Sem Polymod)
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup ~/.haxelib_repo || true
 
-    - name: Install Haxe libraries (Kade Engine 1.8)
+    - name: Install Haxe libraries (Kade Engine 1.8 without polymod)
       run: |
         haxelib install lime 7.9.0 --always
         haxelib install openfl 8.9.7 --always
@@ -52,11 +52,10 @@ jobs:
         haxelib install flixel-ui 2.3.3 --always
         haxelib install hxcpp 4.1.15 --always
         haxelib install actuate 1.8.9 --always
-        haxelib git polymod https://github.com/KadeDev/polymod.git
         haxelib install hscript 2.4.0 --always
-        haxelib run lime setup android --yes
         haxelib git extension-webm https://github.com/KadeDev/extension-webm
         haxelib run lime rebuild extension-webm android
+        haxelib run lime setup android --yes
 
     - name: Install Android SDK & NDK manually
       run: |
