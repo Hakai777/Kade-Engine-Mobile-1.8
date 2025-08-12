@@ -35,7 +35,7 @@ jobs:
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
           curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
           unzip commandlinetools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-          mv $ANDROID_SDK_ROOT/cmdline-tools/tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
           yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
 
       - name: Install Haxe
@@ -43,7 +43,8 @@ jobs:
           HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
           wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
           tar -xzf /tmp/${HAXE_TAR} -C /tmp
-          sudo mv /tmp/haxe_${HAXE_VERSION}-linux64 /opt/haxe
+          EXTRACTED_DIR=$(tar -tf /tmp/${HAXE_TAR} | head -1 | cut -f1 -d"/")
+          sudo mv /tmp/$EXTRACTED_DIR /opt/haxe
           sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
           sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
           haxelib setup ~/.haxelib_repo || true
