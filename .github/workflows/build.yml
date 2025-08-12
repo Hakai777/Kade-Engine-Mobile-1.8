@@ -79,7 +79,7 @@ jobs:
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: /home/runner/work/Kade-Engine-Mobile-1.8/Kade-Engine-Mobile-1.8/Android/Sdk/cmdline-tools/latest/bin:/usr/local/bin:/usr/bin:/bin:${PATH}
+          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${PATH}
         run: |
           mkdir -p ~/.haxelib_repo
           haxelib install lime ${LIME_VERSION} --always
@@ -96,7 +96,7 @@ jobs:
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:${PATH}
+          PATH: /usr/local/bin:/usr/bin:/bin:${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:${PATH}
         run: |
           echo "🏗️ Starting build (verbose)..."
           haxelib run lime build android -final -verbose | tee buildlog.txt
