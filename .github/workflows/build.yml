@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (Full Debug)
+name: Build Kade Engine Mobile (BoloVEVO Fork)
 
 on:
   push:
@@ -15,18 +15,19 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (BoloVEVO Fork)
         uses: actions/checkout@v3
+        with:
+          repository: BoloVEVO/Kade-Engine-Mobile-1.8
+          ref: main
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository ppa:openjdk-r/ppa -y
-          sudo apt-get update
-          sudo apt-get install -y openjdk-11-jdk wget tar unzip lib32stdc++6 lib32z1
+          sudo apt-get install -y build-essential git wget unzip tar \
+            openjdk-11-jdk ant lib32stdc++6 lib32z1 lib32ncurses6 \
+            lib32gcc-s1 pkg-config
 
       - name: Install Haxe
         run: |
@@ -38,28 +39,36 @@ jobs:
 
       - name: Install Haxe libraries
         run: |
-          haxelib setup ~/.haxelib
+          haxelib setup ~/haxelib
           haxelib install lime ${LIME_VERSION}
           haxelib install openfl ${OPENFL_VERSION}
           haxelib install flixel
           haxelib install flixel-addons
           haxelib install flixel-ui
-          haxelib git polymod https://github.com/BoloVEVO/polymod
-          haxelib install tjson
-          haxelib install hxjsonast
-          haxelib install hxcpp
-          haxelib install extension-webm
+          haxelib install polymod
+          haxelib install hxjson2
           haxelib install actuate
+          haxelib install tjson
+          haxelib run lime setup
+          haxelib run lime setup android
 
       - name: Setup Android SDK
         run: |
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          mkdir -p ${ANDROID_HOME}/cmdline-tools
-          unzip cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools
-          mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest
-          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses
-          ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip -d cmdline-tools
+          sudo mkdir -p /usr/lib/android-sdk/cmdline-tools
+          sudo mv cmdline-tools /usr/lib/android-sdk/cmdline-tools/latest
+          yes | /usr/lib/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/lib/android-sdk \
+            "platforms;android-${ANDROID_API_LEVEL}" \
+            "build-tools;${ANDROID_BUILD_TOOLS}" \
+            "platform-tools"
 
       - name: Build APK
         run: |
           haxelib run lime build android -debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: KadeEngineMobile-BoloVEVO
+          path: export/debug/android/bin/app/build/outputs/apk/debug/app-debug.apk
