@@ -52,15 +52,13 @@ jobs:
         haxelib install flixel-ui 2.3.3 --always
         haxelib install hxcpp 4.1.15 --always
         haxelib install actuate 1.8.9 --always
-        haxelib install polymod 1.3.3 --always
         haxelib install hscript 2.4.0 --always
         haxelib run lime setup android --yes
-
-    - name: Install extension-webm and rebuild for Android
-      env:
-        HXCPP_ARM64: 1
-      run: |
         haxelib git extension-webm https://github.com/KadeDev/extension-webm
+
+    - name: Rebuild extension-webm for Android
+      run: |
+        export HXCPP_ARM64=1
         haxelib run lime rebuild extension-webm android
 
     - name: Install Android SDK & NDK manually
