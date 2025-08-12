@@ -1,87 +1,68 @@
-name: Build Kade Engine 1.8 APK
+name: Build Kade Engine APK (Java 8 + SDK Android)
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-env:
-  HAXE_VERSION: "4.1.5"
-  LIME_VERSION: "7.7.0"
-  OPENFL_VERSION: "8.9.7"
-  ANDROID_API_LEVEL: "30"
-  ANDROID_BUILD_TOOLS: "30.0.3"
-  NDK_VERSION: "21.4.7075529"
-  JAVA_HOME: "/usr/lib/jvm/java-8-openjdk-amd64"
-
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      JAVA_HOME_8: /usr/lib/jvm/java-8-openjdk-amd64
+      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+      HAXE_VERSION: 4.1.5
+      LIME_VERSION: 8.0.2
+      OPENFL_VERSION: 9.2.2
+      ANDROID_API_LEVEL: 28
+      ANDROID_BUILD_TOOLS: 28.0.3
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Setup JDK 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: 8
+    - name: Setup Java 8
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: 8
 
-      - name: Setup Android SDK (manually)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-          wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip -d $HOME/Android/
-          mkdir -p $HOME/Android/cmdline-tools/latest
-          mv $HOME/Android/cmdline-tools/cmdline-tools/* $HOME/Android/cmdline-tools/latest/
-          export ANDROID_HOME=$HOME/Android
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-          yes | sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-30" "build-tools;30.0.3" "ndk;21.4.7075529"
+    - name: Verify java version
+      run: java -version
 
-      - name: Install Haxe
-        run: |
-          wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
-          tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
-          sudo mv haxe-${HAXE_VERSION}-linux64 /usr/lib/haxe
-          sudo ln -sf /usr/lib/haxe/haxe /usr/bin/haxe
-          sudo ln -sf /usr/lib/haxe/haxelib /usr/bin/haxelib
+    - name: Setup Android SDK
+      run: |
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+        cd $ANDROID_SDK_ROOT/cmdline-tools
+        curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
+        unzip commandlinetools.zip
+        # O unzip cria uma pasta cmdline-tools
+        mv cmdline-tools latest
+      shell: bash
 
-      - name: Install Haxe libraries
-        run: |
-          mkdir -p ~/.haxelib_repo
-          haxelib install lime ${LIME_VERSION} --always
-          haxelib install openfl ${OPENFL_VERSION} --always
-          haxelib install flixel 4.10.0 --always || true
-          haxelib install flixel-addons 2.9.0 --always || true
-          haxelib install flixel-ui 2.3.3 --always || true
-          haxelib install hxcpp 4.1.15 --always || true
-          haxelib install actuate 1.8.9 --always || true
-          haxelib install hscript 2.4.0 --always || true
-          haxelib install extension-webm --always || true
-          haxelib run lime setup android --yes
+    - name: Add sdkmanager to PATH
+      run: echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-      - name: Build APK
-        run: |
-          echo "🏗️ Starting build (verbose)..."
-          haxelib run lime build android -final -verbose | tee buildlog.txt
+    - name: Accept licenses and install SDK packages
+      run: |
+        yes | sdkmanager --licenses
+        sdkmanager "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}"
+      shell: bash
 
-      - name: Find & copy APK
-        run: |
-          mkdir -p apk
-          APK=$(find . -type f -name '*.apk' | head -n 1 || true)
-          if [ -z "$APK" ]; then
-            echo "❌ Nenhum APK encontrado — anexar buildlog.txt para ver erro."
-            echo "Trechos do buildlog (últimas 200 linhas):"
-            tail -n 200 buildlog.txt || true
-            exit 1
-          fi
-          echo "✅ APK encontrado em: $APK"
-          cp "$APK" apk/
+    - name: Download and install Haxe ${HAXE_VERSION}
+      run: |
+        curl -LO https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
+        tar -xf haxe-${HAXE_VERSION}-linux64.tar.gz
+        sudo mv haxe-${HAXE_VERSION} /usr/local/haxe
+        echo "/usr/local/haxe/bin" >> $GITHUB_PATH
+      shell: bash
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: KadeEngine-1.8-APK
-          path: apk/
+    - name: Verify Haxe version
+      run: haxe --version
+
+    - name: Build APK
+      run: |
+        # Ajuste o comando abaixo conforme o seu build system do Kade Engine
+        lime test android -debug
+      shell: bash
