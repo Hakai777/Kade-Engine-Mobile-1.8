@@ -1,8 +1,8 @@
-name: Build Kade Engine APK (KE 1.8 - robust)
+name: Build Kade Engine 1.8 APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -12,74 +12,38 @@ env:
   ANDROID_API_LEVEL: "30"
   ANDROID_BUILD_TOOLS: "30.0.3"
   NDK_VERSION: "21.4.7075529"
-  ANDROID_SDK_ROOT: ${{ github.workspace }}/Android/Sdk
+  JAVA_HOME: "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.462-8/x64"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Setup Java 8 (Temurin)
-        uses: actions/setup-java@v4
+      - name: Setup JDK 8
+        uses: actions/setup-java@v3
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: 8
 
-      - name: Install system deps (neko, tools)
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y wget curl unzip git build-essential ca-certificates \
-            libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev \
-            neko || true
-          sudo ldconfig || true
-          if [ -f /usr/lib/neko/libneko.so.2 ] && [ ! -f /usr/lib/libneko.so.2 ]; then
-            sudo ln -sf /usr/lib/neko/libneko.so.2 /usr/lib/libneko.so.2 || true
-          fi
-
-      - name: Download & install older Android cmdline-tools (Java 8 friendly)
-        run: |
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-          curl -L -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
-          unzip -q /tmp/cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-          if [ -d "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" ]; then
-            mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-          elif [ -d "$ANDROID_SDK_ROOT/cmdline-tools/tools" ]; then
-            mv "$ANDROID_SDK_ROOT/cmdline-tools/tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-          else
-            for d in "$ANDROID_SDK_ROOT/cmdline-tools"/*; do
-              if [ -d "$d" ] && [ "$(basename "$d")" != "latest" ]; then
-                mv "$d" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-                break
-              fi
-            done
-          fi
-          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
-            "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
-
-      - name: Accept Android SDK licenses
-        run: yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
+          ndk: ${{ env.NDK_VERSION }}
 
       - name: Install Haxe
         run: |
-          HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
-          wget -q "https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR}" -O "/tmp/${HAXE_TAR}"
-          tar -xzf "/tmp/${HAXE_TAR}" -C /tmp
-          HAXE_DIR=$(tar -tf "/tmp/${HAXE_TAR}" | head -n1 | cut -f1 -d"/")
-          sudo mv "/tmp/${HAXE_DIR}" /opt/haxe
-          sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
-          sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
-          haxelib setup ~/.haxelib_repo || true
-          echo "haxe -> $(which haxe)"; haxe -version || true
+          wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
+          tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
+          sudo mv haxe-${HAXE_VERSION} /usr/lib/haxe
+          sudo ln -s /usr/lib/haxe/haxe /usr/bin/haxe
+          sudo ln -s /usr/lib/haxe/haxelib /usr/bin/haxelib
 
-      - name: Install Haxe libs (Kade 1.8 compat)
-        env:
-          ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: /home/runner/work/Kade-Engine-Mobile-1.8/Kade-Engine-Mobile-1.8/Android/Sdk/cmdline-tools/latest/bin:/usr/local/bin:/usr/bin:/bin:$PATH
+      - name: Install Haxe libraries
         run: |
           mkdir -p ~/.haxelib_repo
           haxelib install lime ${LIME_VERSION} --always
@@ -90,13 +54,10 @@ jobs:
           haxelib install hxcpp 4.1.15 --always || true
           haxelib install actuate 1.8.9 --always || true
           haxelib install hscript 2.4.0 --always || true
+          haxelib install extension-webm --always || true
           haxelib run lime setup android --yes
 
-      - name: Build APK (final)
-        env:
-          ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: /home/runner/work/Kade-Engine-Mobile-1.8/Kade-Engine-Mobile-1.8/Android/Sdk/cmdline-tools/latest/bin:/home/runner/work/Kade-Engine-Mobile-1.8/Kade-Engine-Mobile-1.8/Android/Sdk/platform-tools:/usr/local/bin:/usr/bin:/bin:$PATH
+      - name: Build APK
         run: |
           echo "🏗️ Starting build (verbose)..."
           haxelib run lime build android -final -verbose | tee buildlog.txt
@@ -115,7 +76,7 @@ jobs:
           cp "$APK" apk/
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: KadeEngine-APK
+          name: KadeEngine-1.8-APK
           path: apk/
