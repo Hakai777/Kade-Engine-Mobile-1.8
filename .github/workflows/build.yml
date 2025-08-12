@@ -13,67 +13,72 @@ env:
   ANDROID_BUILD_TOOLS: "30.0.3"
   NDK_VERSION: "21.4.7075529"
   JAVA_HOME: "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.462-8/x64"
+  ANDROID_SDK_ROOT: ${{ github.workspace }}/Android
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Setup JDK 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: 8
+    - name: Setup Java 8
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 8
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-        # Atenção: essa action não aceita inputs api-level, build-tools e ndk, você pode instalar manualmente se quiser
+    - name: Setup Android SDK cmdline-tools 4.0
+      run: |
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+        cd $ANDROID_SDK_ROOT/cmdline-tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6858069_latest.zip -O cmdline-tools.zip
+        unzip cmdline-tools.zip
+        mv cmdline-tools latest
+        rm cmdline-tools.zip
+        echo "SDK installed at $ANDROID_SDK_ROOT"
 
-      - name: Install Haxe
-        run: |
-          wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
-          tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
-          sudo mv haxe-${HAXE_VERSION}-linux64 /usr/lib/haxe
-          sudo ln -sf /usr/lib/haxe/haxe /usr/bin/haxe
-          sudo ln -sf /usr/lib/haxe/haxelib /usr/bin/haxelib
+    - name: Accept licenses and install SDK packages
+      run: |
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses
+        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-30" "build-tools;30.0.3" "ndk;21.4.7075529"
 
-      - name: Install Haxe libraries
-        run: |
-          mkdir -p ~/.haxelib_repo
-          haxelib install lime ${LIME_VERSION} --always
-          haxelib install openfl ${OPENFL_VERSION} --always
-          haxelib install flixel 4.10.0 --always || true
-          haxelib install flixel-addons 2.9.0 --always || true
-          haxelib install flixel-ui 2.3.3 --always || true
-          haxelib install hxcpp 4.1.15 --always || true
-          haxelib install actuate 1.8.9 --always || true
-          haxelib install hscript 2.4.0 --always || true
-          haxelib install extension-webm --always || true
-          haxelib run lime setup android --yes
+    - name: Install Haxe
+      run: |
+        wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
+        tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
+        sudo mv haxe-${HAXE_VERSION} /usr/lib/haxe
+        sudo ln -s /usr/lib/haxe/haxe /usr/bin/haxe
+        sudo ln -s /usr/lib/haxe/haxelib /usr/bin/haxelib
 
-      - name: Build APK
-        run: |
-          echo "🏗️ Starting build (verbose)..."
-          haxelib run lime build android -final -verbose | tee buildlog.txt
+    - name: Install Haxe libs
+      run: |
+        mkdir -p ~/.haxelib_repo
+        haxelib install lime ${LIME_VERSION} --always
+        haxelib install openfl ${OPENFL_VERSION} --always
+        haxelib install extension-webm --always || true
+        haxelib run lime setup android --yes
 
-      - name: Find & copy APK
-        run: |
-          mkdir -p apk
-          APK=$(find . -type f -name '*.apk' | head -n 1 || true)
-          if [ -z "$APK" ]; then
-            echo "❌ Nenhum APK encontrado — anexar buildlog.txt para ver erro."
-            echo "Trechos do buildlog (últimas 200 linhas):"
-            tail -n 200 buildlog.txt || true
-            exit 1
-          fi
-          echo "✅ APK encontrado em: $APK"
-          cp "$APK" apk/
+    - name: Build APK
+      run: |
+        echo "🏗️ Starting build (verbose)..."
+        haxelib run lime build android -final -verbose | tee buildlog.txt
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: KadeEngine-1.8-APK
-          path: apk/
+    - name: Find & copy APK
+      run: |
+        mkdir -p apk
+        APK=$(find . -type f -name '*.apk' | head -n 1 || true)
+        if [ -z "$APK" ]; then
+          echo "❌ Nenhum APK encontrado — anexar buildlog.txt para ver erro."
+          tail -n 200 buildlog.txt || true
+          exit 1
+        fi
+        echo "✅ APK encontrado em: $APK"
+        cp "$APK" apk/
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: KadeEngine-1.8-APK
+        path: apk/
