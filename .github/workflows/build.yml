@@ -30,6 +30,9 @@ jobs:
           distribution: temurin
           java-version: 8
 
+      - name: Install Neko (fix libneko.so.2 error)
+        run: sudo apt-get update && sudo apt-get install -y neko
+
       - name: Download and setup Android SDK command-line tools (older version)
         run: |
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
@@ -49,9 +52,6 @@ jobs:
           sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
           haxelib setup ~/.haxelib_repo || true
 
-      - name: Install Neko runtime
-        run: sudo apt-get update && sudo apt-get install -y neko
-
       - name: Setup Lime and OpenFL libs
         run: |
           haxelib install lime ${LIME_VERSION}
@@ -59,7 +59,8 @@ jobs:
           haxelib run lime setup android
 
       - name: Build APK
-        run: lime build android -debug
+        run: |
+          lime build android -debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
