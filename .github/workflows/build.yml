@@ -1,4 +1,4 @@
-name: Build Kade Engine Mobile (BoloVEVO Fork)
+name: Build Kade Engine APK (Debug + Release)
 
 on:
   push:
@@ -16,59 +16,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository (BoloVEVO Fork)
-        uses: actions/checkout@v3
-        with:
-          repository: BoloVEVO/Kade-Engine-Mobile-1.8
-          ref: main
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clean previous builds
+        run: |
+          rm -rf export/debug
+          rm -rf export/release
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential git wget unzip tar \
-            openjdk-11-jdk ant lib32stdc++6 lib32z1 lib32ncurses6 \
-            lib32gcc-s1 pkg-config
+        run: sudo apt-get update && sudo apt-get install -y unzip libusb-1.0-0-dev
 
       - name: Install Haxe
         run: |
           wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
           tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
-          sudo mv haxe-${HAXE_VERSION}-linux64 /usr/lib/haxe
-          sudo ln -s /usr/lib/haxe/haxe /usr/bin/haxe
-          sudo ln -s /usr/lib/haxe/haxelib /usr/bin/haxelib
+          sudo mv haxe-${HAXE_VERSION} /usr/lib/haxe
+          sudo ln -sf /usr/lib/haxe/haxe /usr/bin/haxe
+          sudo ln -sf /usr/lib/haxe/haxelib /usr/bin/haxelib
+          haxelib setup ~/.haxelib
 
       - name: Install Haxe libraries
         run: |
-          haxelib setup ~/haxelib
-          haxelib install lime ${LIME_VERSION}
-          haxelib install openfl ${OPENFL_VERSION}
-          haxelib install flixel
-          haxelib install flixel-addons
-          haxelib install flixel-ui
-          haxelib install polymod
-          haxelib install hxjson2
-          haxelib install actuate
-          haxelib install tjson
-          haxelib run lime setup
-          haxelib run lime setup android
+          haxelib install lime ${LIME_VERSION} --always
+          haxelib install openfl ${OPENFL_VERSION} --always
+          haxelib run lime setup android --always
 
-      - name: Setup Android SDK
-        run: |
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-9477386_latest.zip -d cmdline-tools
-          sudo mkdir -p /usr/lib/android-sdk/cmdline-tools
-          sudo mv cmdline-tools /usr/lib/android-sdk/cmdline-tools/latest
-          yes | /usr/lib/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/lib/android-sdk \
-            "platforms;android-${ANDROID_API_LEVEL}" \
-            "build-tools;${ANDROID_BUILD_TOOLS}" \
-            "platform-tools"
+      - name: Build Debug APK
+        run: haxelib run lime build android -debug
 
-      - name: Build APK
-        run: |
-          haxelib run lime build android -debug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
         with:
-          name: KadeEngineMobile-BoloVEVO
-          path: export/debug/android/bin/app/build/outputs/apk/debug/app-debug.apk
+          name: KadeEngine-Debug
+          path: export/debug/android/bin/app/build/outputs/apk/debug/*.apk
+
+      - name: Build Release APK
+        run: haxelib run lime build android -release
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KadeEngine-Release
+          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
