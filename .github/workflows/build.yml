@@ -7,7 +7,7 @@ on:
 
 env:
   HAXE_VERSION: "4.1.5"
-  LIME_VERSION: "7.9.0"
+  LIME_VERSION: "7.7.0"
   OPENFL_VERSION: "8.9.7"
   ANDROID_API_LEVEL: "30"
   ANDROID_BUILD_TOOLS: "30.0.3"
@@ -35,13 +35,11 @@ jobs:
             libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev \
             neko || true
           sudo ldconfig || true
-          echo "NEKO libs:"
-          ldconfig -p | grep libneko || true
           if [ -f /usr/lib/neko/libneko.so.2 ] && [ ! -f /usr/lib/libneko.so.2 ]; then
             sudo ln -sf /usr/lib/neko/libneko.so.2 /usr/lib/libneko.so.2 || true
           fi
 
-      - name: Download & install older Android cmdline-tools (Java 8 friendly)
+      - name: Download & install Android cmdline-tools (Java 8 friendly)
         run: |
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
           curl -L -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
@@ -81,7 +79,7 @@ jobs:
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:/usr/local/bin:/usr/bin:/bin
+          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${PATH}
         run: |
           mkdir -p ~/.haxelib_repo
           haxelib install lime ${LIME_VERSION} --always
@@ -98,7 +96,7 @@ jobs:
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:/usr/local/bin:/usr/bin:/bin
+          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:${PATH}
         run: |
           echo "🏗️ Starting build (verbose)..."
           haxelib run lime build android -final -verbose | tee buildlog.txt
