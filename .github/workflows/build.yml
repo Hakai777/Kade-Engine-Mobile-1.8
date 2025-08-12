@@ -52,6 +52,11 @@ jobs:
           sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
           haxelib setup ~/.haxelib_repo || true
 
+      - name: Clear haxelib cache
+        run: |
+          rm -rf ~/.haxelib_repo
+          mkdir -p ~/.haxelib_repo
+
       - name: Setup Lime and OpenFL libs
         run: |
           haxelib install lime ${LIME_VERSION}
@@ -61,6 +66,27 @@ jobs:
       - name: Build APK
         run: |
           lime build android -debug
+
+      - name: Show versions used
+        run: |
+          echo "===== VERSION INFO ====="
+          echo "Haxe version:"
+          haxe -version
+          echo ""
+          echo "Lime version:"
+          haxelib list | grep lime
+          echo ""
+          echo "OpenFL version:"
+          haxelib list | grep openfl
+          echo ""
+          echo "NDK version:"
+          ls $ANDROID_SDK_ROOT/ndk
+          echo ""
+          echo "SDK platforms:"
+          ls $ANDROID_SDK_ROOT/platforms
+          echo ""
+          echo "Build-tools:"
+          ls $ANDROID_SDK_ROOT/build-tools
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
