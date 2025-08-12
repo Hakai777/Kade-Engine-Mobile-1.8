@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (Sem Polymod)
+name: Build Kade Engine APK (KE 1.8 Original)
 
 on:
   push:
@@ -38,12 +38,12 @@ jobs:
         HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
         wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
         tar -xzf /tmp/${HAXE_TAR} -C /tmp
-        sudo mv /tmp/haxe_* /opt/haxe
+        sudo mv /tmp/haxe_${HAXE_VERSION}-linux64 /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup ~/.haxelib_repo || true
 
-    - name: Install Haxe libraries (Kade Engine 1.8 without polymod)
+    - name: Install Haxe libraries (Kade Engine 1.8)
       run: |
         haxelib install lime 7.9.0 --always
         haxelib install openfl 8.9.7 --always
@@ -53,9 +53,9 @@ jobs:
         haxelib install hxcpp 4.1.15 --always
         haxelib install actuate 1.8.9 --always
         haxelib install hscript 2.4.0 --always
+        haxelib run lime setup android --yes
         haxelib git extension-webm https://github.com/KadeDev/extension-webm
         haxelib run lime rebuild extension-webm android
-        haxelib run lime setup android --yes
 
     - name: Install Android SDK & NDK manually
       run: |
@@ -77,14 +77,14 @@ jobs:
         echo "🏗️ Iniciando build do APK..."
         haxelib run lime build android -final -verbose | tee buildlog.txt
 
-    - name: Procurar APK
+    - name: Find APK
       run: |
         echo "🔍 Procurando APK..."
         find . -type f -name "*.apk" -print || echo "Nenhum APK encontrado!"
         echo "📜 Trechos do buildlog com 'apk':"
         grep -i apk buildlog.txt || echo "Nenhum trecho com 'apk' no log"
 
-    - name: Copiar APK para pasta
+    - name: Copy APK to folder
       run: |
         mkdir -p apk
         APK_PATH=$(find . -type f -name '*.apk' | head -n 1)
