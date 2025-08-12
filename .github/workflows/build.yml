@@ -1,8 +1,9 @@
-name: Build Kade Engine 1.8 APK
+name: Build Kade Engine APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -12,7 +13,7 @@ env:
   ANDROID_API_LEVEL: "33"
   ANDROID_BUILD_TOOLS: "33.0.2"
   NDK_VERSION: "21.4.7075529"
-  ANDROID_SDK_ROOT: ${{ env.HOME }}/Android/Sdk
+  ANDROID_SDK_ROOT: $HOME/Android/Sdk
   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.462-8/x64
 
 jobs:
@@ -20,42 +21,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Setup Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: 8
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openjdk-8-jdk unzip wget
 
-    - name: Download and install Haxe
+    - name: Setup Haxe
       run: |
         HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
         wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
         tar -xzf /tmp/${HAXE_TAR} -C /tmp
-        sudo mv /tmp/haxe-${HAXE_VERSION}-linux64 /opt/haxe
+        sudo mv /tmp/haxe_${HAXE_VERSION}-linux64 /opt/haxe
         sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
         sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
         haxelib setup ~/.haxelib_repo || true
 
-    - name: Install Lime and OpenFL
+    - name: Setup Android SDK and NDK
       run: |
-        haxelib install lime ${LIME_VERSION}
-        haxelib install openfl ${OPENFL_VERSION}
-        haxelib set lime ${LIME_VERSION}
-        haxelib set openfl ${OPENFL_VERSION}
-        haxelib run lime setup android
-
-    - name: Install dependencies
-      run: |
-        haxelib install extension-webm
-        haxelib install hscript
-        haxelib install actuate
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=${ANDROID_SDK_ROOT} "platform-tools" "platforms;android-${ANDROID_API_LEVEL}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${NDK_VERSION}"
 
     - name: Build APK
-      run: lime build android -debug -verbose
-      env:
-        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
-        ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-        JAVA_HOME: ${{ env.JAVA_HOME }}
+      run: |
+        lime test android -debug -clean
