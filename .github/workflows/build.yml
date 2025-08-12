@@ -12,6 +12,7 @@ env:
   ANDROID_API_LEVEL: "30"
   ANDROID_BUILD_TOOLS: "30.0.3"
   NDK_VERSION: "21.4.7075529"
+  JAVA_HOME: "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.462-8/x64"
 
 jobs:
   build:
@@ -27,33 +28,27 @@ jobs:
           distribution: 'temurin'
           java-version: 8
 
-      - name: Setup Android SDK (manually)
-        run: |
-          mkdir -p $HOME/Android/Sdk/cmdline-tools
-          cd $HOME/Android/Sdk/cmdline-tools
-          # Baixar a versão 7583922 que é compatível com Java 8
-          wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip
-          rm cmdline-tools.zip
-          mv cmdline-tools latest
-          export ANDROID_SDK_ROOT=$HOME/Android/Sdk
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-${{ env.ANDROID_API_LEVEL }}" "build-tools;${{ env.ANDROID_BUILD_TOOLS }}" "ndk;${{ env.NDK_VERSION }}"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
+          ndk: ${{ env.NDK_VERSION }}
 
       - name: Install Haxe
         run: |
-          wget https://github.com/HaxeFoundation/haxe/releases/download/${{ env.HAXE_VERSION }}/haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz
-          tar -xzf haxe-${{ env.HAXE_VERSION }}-linux64.tar.gz
-          sudo mv haxe-${{ env.HAXE_VERSION }} /usr/lib/haxe
+          wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
+          tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
+          EXTRACTED_DIR=$(tar -tzf haxe-${HAXE_VERSION}-linux64.tar.gz | head -1 | cut -f1 -d"/")
+          sudo mv $EXTRACTED_DIR /usr/lib/haxe
           sudo ln -s /usr/lib/haxe/haxe /usr/bin/haxe
           sudo ln -s /usr/lib/haxe/haxelib /usr/bin/haxelib
 
       - name: Install Haxe libraries
         run: |
           mkdir -p ~/.haxelib_repo
-          haxelib install lime ${{ env.LIME_VERSION }} --always
-          haxelib install openfl ${{ env.OPENFL_VERSION }} --always
+          haxelib install lime ${LIME_VERSION} --always
+          haxelib install openfl ${OPENFL_VERSION} --always
           haxelib install flixel 4.10.0 --always || true
           haxelib install flixel-addons 2.9.0 --always || true
           haxelib install flixel-ui 2.3.3 --always || true
