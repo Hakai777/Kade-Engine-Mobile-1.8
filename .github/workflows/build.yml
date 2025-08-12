@@ -28,12 +28,12 @@ jobs:
           distribution: temurin
           java-version: 8
 
-      - name: Install system deps (neko, tools, coreutils)
+      - name: Install system deps (neko, tools)
         run: |
           sudo apt-get update -y
           sudo apt-get install -y wget curl unzip git build-essential ca-certificates \
             libgl1-mesa-dev libx11-dev libxi-dev libxrandr-dev libasound2-dev libpulse-dev \
-            neko coreutils || true
+            neko || true
           sudo ldconfig || true
           echo "NEKO libs:"
           ldconfig -p | grep libneko || true
@@ -81,7 +81,7 @@ jobs:
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${PATH}
+          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:/usr/local/bin:/usr/bin:/bin
         run: |
           mkdir -p ~/.haxelib_repo
           haxelib install lime ${LIME_VERSION} --always
@@ -98,7 +98,7 @@ jobs:
         env:
           ANDROID_SDK: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-          PATH: /usr/local/bin:${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:${PATH}
+          PATH: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin:${{ env.ANDROID_SDK_ROOT }}/platform-tools:/usr/local/bin:/usr/bin:/bin
         run: |
           echo "🏗️ Starting build (verbose)..."
           haxelib run lime build android -final -verbose | tee buildlog.txt
