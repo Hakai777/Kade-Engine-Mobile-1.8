@@ -1,4 +1,4 @@
-name: Build Kade Engine APK (Java 8 + manual SDK install)
+name: Build Kade Engine APK (Java 8 + SDK compatível)
 
 on:
   push:
@@ -9,7 +9,6 @@ env:
   HAXE_VERSION: "4.1.5"
   LIME_VERSION: "7.7.0"
   OPENFL_VERSION: "8.10.6"
-  ANDROID_SDK_ROOT: ${{ env.HOME }}/Android
   ANDROID_PLATFORM: "android-28"
   ANDROID_BUILD_TOOLS: "28.0.3"
 
@@ -17,17 +16,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_SDK_ROOT: $HOME/Android
+
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup Java 8
+    - name: Setup Java 8 (Temurin)
       uses: actions/setup-java@v3
       with:
         distribution: temurin
         java-version: 8
 
-    - name: Download and install Android SDK cmdline-tools (older compatible version)
+    - name: Download and install Android SDK cmdline-tools compatible with Java 8
       run: |
         mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
         cd $ANDROID_SDK_ROOT
@@ -37,43 +39,38 @@ jobs:
         mv cmdline-tools-temp/cmdline-tools/* cmdline-tools/latest/
         rm -rf cmdline-tools-temp cmdline-tools.zip
 
-    - name: Add Android SDK tools to PATH
-      run: echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
-
-    - name: Accept Android licenses
-      run: yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses
-
-    - name: Install SDK platform and build-tools
+    - name: Set PATH for Android SDK tools
       run: |
-        sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
+        echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
 
-    - name: Setup Haxe ${HAXE_VERSION}
+    - name: Install Android SDK platforms and build tools
+      run: |
+        sdkmanager "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}" "platform-tools"
+        yes | sdkmanager --licenses
+
+    - name: Install Haxe
       run: |
         wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
         tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
         sudo mv haxe-${HAXE_VERSION} /usr/lib/haxe
-        sudo ln -sf /usr/lib/haxe/haxe /usr/bin/haxe
-        sudo ln -sf /usr/lib/haxe/haxelib /usr/bin/haxelib
-        haxelib setup /usr/lib/haxe/lib
+        sudo ln -s /usr/lib/haxe/haxe /usr/bin/haxe
+        sudo ln -s /usr/lib/haxe/haxelib /usr/bin/haxelib
 
-    - name: Install Lime and OpenFL from Kade Engine versions
+    - name: Install haxelib libraries (Lime, OpenFL, extension-webm)
       run: |
+        haxelib setup /usr/lib/haxe/lib
         haxelib install lime ${LIME_VERSION}
         haxelib install openfl ${OPENFL_VERSION}
-        haxelib git lime https://github.com/KadeDev/Lime.git ${LIME_VERSION}
-        haxelib git openfl https://github.com/KadeDev/OpenFL.git ${OPENFL_VERSION}
-        haxelib run lime setup
-
-    - name: Install extension-webm for Kade Engine
-      run: |
+        # Extension-webm deve ser linkada como no repo da Kade Engine
         haxelib git extension-webm https://github.com/KadeDev/extension-webm.git
 
-    - name: Build APK debug
+    - name: Compile APK (Kade Engine 1.8)
       run: |
-        lime build android -debug -android
+        lime rebuild android -clean
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: kade-engine-apk
-        path: ./bin/android/bin/KadeEngine-debug.apk
+        path: bin/android/bin/*.apk
