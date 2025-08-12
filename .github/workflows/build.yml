@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup JDK 8
         uses: actions/setup-java@v3
@@ -76,7 +76,7 @@ jobs:
           cp "$APK" apk/
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: KadeEngine-1.8-APK
           path: apk/
