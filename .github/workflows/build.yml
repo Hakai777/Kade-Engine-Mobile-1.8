@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java 8
-        uses: actions/setup-java@3
+        uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: 8
@@ -43,7 +43,7 @@ jobs:
           HAXE_TAR="haxe-${HAXE_VERSION}-linux64.tar.gz"
           wget -q https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/${HAXE_TAR} -O /tmp/${HAXE_TAR}
           tar -xzf /tmp/${HAXE_TAR} -C /tmp
-          sudo mv /tmp/haxe-${HAXE_VERSION} /opt/haxe
+          sudo mv /tmp/haxe_${HAXE_VERSION}-linux64 /opt/haxe
           sudo ln -sf /opt/haxe/haxe /usr/local/bin/haxe
           sudo ln -sf /opt/haxe/haxelib /usr/local/bin/haxelib
           haxelib setup ~/.haxelib_repo || true
