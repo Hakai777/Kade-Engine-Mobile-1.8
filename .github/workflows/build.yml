@@ -11,7 +11,7 @@ jobs:
 
     env:
       JAVA_HOME_8: /usr/lib/jvm/java-8-openjdk-amd64
-      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       HAXE_VERSION: 4.1.5
       LIME_VERSION: 8.0.2
       OPENFL_VERSION: 9.2.2
@@ -37,7 +37,6 @@ jobs:
         cd $ANDROID_SDK_ROOT/cmdline-tools
         curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
         unzip commandlinetools.zip
-        # O unzip cria uma pasta cmdline-tools
         mv cmdline-tools latest
       shell: bash
 
@@ -62,7 +61,5 @@ jobs:
       run: haxe --version
 
     - name: Build APK
-      run: |
-        # Ajuste o comando abaixo conforme o seu build system do Kade Engine
-        lime test android -debug
+      run: lime test android -debug
       shell: bash
