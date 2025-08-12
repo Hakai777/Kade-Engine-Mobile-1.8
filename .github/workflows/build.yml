@@ -1,4 +1,4 @@
-name: Build Kade Engine APK
+name: Build Kade Engine APK (Debug + Release)
 
 on:
   push:
@@ -30,10 +30,10 @@ jobs:
           distribution: temurin
           java-version: 8
 
-      - name: Install Neko (fix libneko.so.2 error)
+      - name: Install Neko
         run: sudo apt-get update && sudo apt-get install -y neko
 
-      - name: Download and setup Android SDK command-line tools (older version)
+      - name: Download and setup Android SDK (old tools)
         run: |
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
           curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
@@ -57,39 +57,37 @@ jobs:
           rm -rf ~/.haxelib_repo
           mkdir -p ~/.haxelib_repo
 
-      - name: Setup Lime and OpenFL libs
+      - name: Setup Lime and OpenFL
         run: |
           haxelib install lime ${LIME_VERSION}
           haxelib install openfl ${OPENFL_VERSION}
           haxelib run lime setup android
 
-      - name: Build APK
-        run: |
-          lime build android -debug
+      - name: Build APK (Debug)
+        run: lime build android -debug
+
+      - name: Build APK (Release)
+        run: lime build android -final
 
       - name: Show versions used
         run: |
           echo "===== VERSION INFO ====="
-          echo "Haxe version:"
-          haxe -version
+          echo "Haxe version:"; haxe -version
           echo ""
-          echo "Lime version:"
-          haxelib list | grep lime
+          echo "Lime version:"; haxelib list | grep lime
           echo ""
-          echo "OpenFL version:"
-          haxelib list | grep openfl
+          echo "OpenFL version:"; haxelib list | grep openfl
           echo ""
-          echo "NDK version:"
-          ls $ANDROID_SDK_ROOT/ndk
+          echo "NDK version:"; ls $ANDROID_SDK_ROOT/ndk
           echo ""
-          echo "SDK platforms:"
-          ls $ANDROID_SDK_ROOT/platforms
+          echo "SDK platforms:"; ls $ANDROID_SDK_ROOT/platforms
           echo ""
-          echo "Build-tools:"
-          ls $ANDROID_SDK_ROOT/build-tools
+          echo "Build-tools:"; ls $ANDROID_SDK_ROOT/build-tools
 
-      - name: Upload APK artifact
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kade-engine-apk
-          path: bin/android/bin/KadeEngine-debug.apk
+          name: kade-engine-apks
+          path: |
+            bin/android/bin/KadeEngine-debug.apk
+            bin/android/bin/KadeEngine-release.apk
