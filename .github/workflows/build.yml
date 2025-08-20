@@ -28,11 +28,10 @@ jobs:
 
       - name: Instalar Haxe 4.1.5
         run: |
-          wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
-          tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
+          wget https://github.com/HaxeFoundation/haxe/releases/download/4.1.5/haxe-4.1.5-linux64.tar.gz
+          tar -xzf haxe-4.1.5-linux64.tar.gz
           sudo mkdir -p /usr/local/bin
-          sudo cp -r haxe-${HAXE_VERSION}/haxe /usr/local/bin/haxe
-          sudo cp -r haxe-${HAXE_VERSION}/haxelib /usr/local/bin/haxelib
+          sudo cp -r haxe/* /usr/local/bin/
           haxelib setup ~/.haxelib
 
       - name: Instalar bibliotecas Haxe
