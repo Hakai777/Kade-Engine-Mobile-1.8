@@ -1,79 +1,72 @@
-name: Build Kade Engine 1.8 APK (Android SDK + NDK + Extension-WebM)
+name: Android Build CI
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-env:
-  HAXE_VERSION: "4.1.5"
-  LIME_VERSION: "7.8.0"
-  OPENFL_VERSION: "9.4.0"
-  ANDROID_API_LEVEL: "33"
-  ANDROID_BUILD_TOOLS: "33.0.2"
-  ANDROID_NDK_VERSION: "21.4.7075529" # compatível com Java 8
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Clonar repositório
-        uses: actions/checkout@v3
-
-      - name: Instalar dependências básicas
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip openjdk-8-jdk git python3
-
-      - name: Instalar Haxe 4.1.5
-        run: |
-          wget https://github.com/HaxeFoundation/haxe/releases/download/4.1.5/haxe-4.1.5-linux64.tar.gz
-          tar -xzf haxe-4.1.5-linux64.tar.gz
-          sudo mkdir -p /usr/local/bin
-          sudo cp -r haxe/* /usr/local/bin/
-          haxelib setup ~/.haxelib
-
-      - name: Instalar bibliotecas Haxe
-        run: |
-          haxelib install lime ${LIME_VERSION}
-          haxelib install openfl ${OPENFL_VERSION}
-          haxelib install flixel 4.8.1
-          haxelib install hscript 2.5.0
-          haxelib install hxcpp 4.3.2
-          haxelib install lime-samples 7.0.0
-          haxelib install flixel-tools 1.5.1
-          haxelib install flixel-demos 3.2.0
-          haxelib install flixel-templates 2.7.0
-          haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
-          haxelib install flixel-addons 2.11.0
-          haxelib install flixel-ui 2.5.0
-          haxelib install polymod 1.3.1
-          haxelib install newgrounds 1.2.0
-          haxelib install actuate
-          haxelib git linc_luajit https://github.com/nebulazorua/linc_luajit.git
-          haxelib git hxvm-luajit https://github.com/nebulazorua/hxvm-luajit
-          haxelib git faxe https://github.com/uhrobots/faxe
-          haxelib git extension-webm https://github.com/KadeDev/extension-webm
-
-      - name: Rebuild extension-webm
-        run: |
-          lime rebuild extension-webm android
-
-      - name: Setup Android SDK & NDK
-        uses: android-actions/setup-android@v2
+      - uses: actions/checkout@v2
+      
+      - uses: krdlab/setup-haxe@v1
         with:
-          api-level: ${{ env.ANDROID_API_LEVEL }}
-          build-tools: ${{ env.ANDROID_BUILD_TOOLS }}
-          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
-          java-version: 8
+          haxe-version: 4.1.5
+          
+      - name: Cache haxelib path
+        uses: actions/cache@v2
+        with:
+          path: |
+            %HAXELIB_ROOT%
+          key: ${{ runner.os }}-android
+          
+      - name: Setup Android SDK Tools
+        uses: android-actions/setup-android@v2.0.2
+        
+      - name: Setup Java JDK
+        uses: actions/setup-java@v2.3.1
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+        
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r20b
 
-      - name: Compilar APK
+      - name: Instalar libs Haxe e rebuild
         run: |
+          mkdir -p "%HAXELIB_ROOT%"
+          haxelib setup "%HAXELIB_ROOT%"
+          haxelib install lime 7.8.0 --quiet
+          haxelib install openfl 9.4.0 --quiet
+          haxelib install flixel 4.9.0 --quiet
+          haxelib install hxcpp --quiet
+          haxelib run lime setup
+          haxelib run lime config ANDROID_SDK $ANDROID_SDK_ROOT
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_ROOT
+          haxelib run lime config JAVA_HOME $JAVA_HOME
+          haxelib run lime config ANDROID_SETUP true
+          haxelib install flixel-tools --quiet
+          haxelib install flixel-ui --quiet
+          haxelib install flixel-addons 2.10.0 --quiet
+          haxelib install hscript --quiet
+          haxelib git faxe https://github.com/uhrobots/faxe --quiet
+          haxelib git polymod https://github.com/MasterEric/polymod.git --quiet
+          haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc --quiet
+          haxelib git extension-webm https://github.com/KlavierGayming/extension-webm --quiet
+          haxelib git linc_luajit https://github.com/Sirox228/linc_luajit
+          haxelib run lime config HXCPP_ARM64 true
+          haxelib run lime config HXCPP_x86 true
+          haxelib install actuate 
+          haxelib run lime rebuild extension-webm android
+          haxelib list
+          
+      - name: Build APK
+        run: |
+          haxelib run lime setup android
           haxelib run lime build android -final
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          
+      - uses: actions/upload-artifact@v2
         with:
-          name: KadeEngine-1.8-APK
-          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+          name: Android Build
+          path: export/release/android/bin/app/build/outputs/apk/debug
