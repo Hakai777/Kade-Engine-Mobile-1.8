@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  HAXE_VERSION: "4.3.4"
+  HAXE_VERSION: "4.1.5"
   LIME_VERSION: "7.8.0"
   OPENFL_VERSION: "9.4.0"
   ANDROID_API_LEVEL: "33"
@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y wget unzip openjdk-8-jdk ant
 
-      - name: Instalar Haxe
+      - name: Instalar Haxe 4.1.5
         run: |
           wget https://github.com/HaxeFoundation/haxe/releases/download/${HAXE_VERSION}/haxe-${HAXE_VERSION}-linux64.tar.gz
           tar -xzf haxe-${HAXE_VERSION}-linux64.tar.gz
