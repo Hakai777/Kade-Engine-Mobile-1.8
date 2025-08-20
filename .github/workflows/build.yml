@@ -4,7 +4,7 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Alterado de ubuntu-latest para 20.04
     
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +31,7 @@ jobs:
         
       - uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r19
+          ndk-version: r19c  # Alterado de r20b para r19c
 
       - name: Instalar libs Haxe e rebuild
         run: |
