@@ -31,7 +31,7 @@ steps:
       
   - uses: nttld/setup-ndk@v1  
     with:  
-      ndk-version: r19c
+      ndk-version: r19c  
 
   - name: Instalar libs Haxe e rebuild  
     run: |  
