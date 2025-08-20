@@ -31,7 +31,7 @@ jobs:
         
       - uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r20b
+          ndk-version: r19
 
       - name: Instalar libs Haxe e rebuild
         run: |
