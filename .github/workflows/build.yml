@@ -62,9 +62,6 @@ jobs:
           haxelib run lime config HXCPP_ARM64 true
           haxelib run lime config HXCPP_x86 true
 
-      - name: Rebuild extension-webm
-        run: haxelib run lime rebuild extension-webm android
-
       - name: Listar libs
         run: haxelib list
 
